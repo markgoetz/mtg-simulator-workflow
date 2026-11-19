@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseDecklist } from "../decklist/index.js";
-import loadCardSource from "./loadCardSource.js";
+import loadCardCache from "./loadCardCache.js";
 import resolveDecklist from "./resolveDecklist.js";
 
-const source = loadCardSource(fileURLToPath(new URL("./fixtures/oracle-cards-sample.jsonl", import.meta.url)));
+const cache = loadCardCache(fileURLToPath(new URL("./fixtures/oracle-cards-sample.jsonl", import.meta.url)));
 
 const DECKLIST = [
   "Commander",
@@ -20,11 +20,11 @@ const DECKLIST = [
 ].join("\n");
 
 describe("resolveDecklist", () => {
-  const result = resolveDecklist(parseDecklist(DECKLIST), source);
+  const result = resolveDecklist(parseDecklist(DECKLIST), cache);
 
   it("resolves the commander and each card to Scryfall card data, keeping quantities", () => {
     expect(result.commander?.name).toBe("Atraxa, Praetors' Voice");
-    expect(result.cards.map((c) => [c.card.name, c.quantity])).toEqual([
+    expect(result.cards.map((c) => [c.cardData.name, c.quantity])).toEqual([
       ["Sol Ring", 1],
       ["Wear // Tear", 1],
       ["Forest", 10],
@@ -40,7 +40,7 @@ describe("resolveDecklist", () => {
   });
 
   it("reports a commander that cannot be found", () => {
-    const missing = resolveDecklist(parseDecklist("Commander\n1 Nobody Special\nDeck\n1 Sol Ring"), source);
+    const missing = resolveDecklist(parseDecklist("Commander\n1 Nobody Special\nDeck\n1 Sol Ring"), cache);
     expect(missing.commander).toBeUndefined();
     expect(missing.notFound.map((n) => n.line)).toEqual([2]);
   });

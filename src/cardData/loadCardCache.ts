@@ -8,7 +8,7 @@ export interface CardFace {
   oracleText: string;
 }
 
-export interface Card {
+export interface CardData {
   name: string;
   layout: string;
   /** Front face mana cost; for split cards, the faces joined with " // ". */
@@ -21,9 +21,9 @@ export interface Card {
   faces: CardFace[];
 }
 
-export interface CardSource {
+export interface CardCache {
   /** Finds a card by full name, face name or single-slash name; undefined if there is none. */
-  lookup(name: string): Card | undefined;
+  lookup(name: string): CardData | undefined;
 }
 
 interface ScryfallFace {
@@ -40,7 +40,7 @@ interface ScryfallCard extends ScryfallFace {
   card_faces?: ScryfallFace[];
 }
 
-const REFRESH_HINT = "Run `npm run cards:refresh` to download the Scryfall card data again.";
+const REFRESH_HINT = "Run `npm run cards:refresh` to download the card cache again.";
 
 function toFace(raw: ScryfallFace, fallbackName: string): CardFace {
   return {
@@ -51,7 +51,7 @@ function toFace(raw: ScryfallFace, fallbackName: string): CardFace {
   };
 }
 
-function toCard(raw: ScryfallCard): Card {
+function toCardData(raw: ScryfallCard): CardData {
   const faces = raw.card_faces?.length ? raw.card_faces.map((f) => toFace(f, raw.name)) : [toFace(raw, raw.name)];
   const front = faces[0]!;
   const split = raw.layout === "split" || raw.layout === "flip" || raw.layout === "adventure";
@@ -104,12 +104,12 @@ function readCards(path: string): ScryfallCard[] {
 }
 
 /** Reads the cached Scryfall Oracle bulk file at `path`. Throws a user-facing Error if it is missing or corrupt. */
-export default function loadCardSource(path: string): CardSource {
-  const byName = new Map<string, Card>();
-  const byFace = new Map<string, Card>();
+export default function loadCardCache(path: string): CardCache {
+  const byName = new Map<string, CardData>();
+  const byFace = new Map<string, CardData>();
   for (const raw of readCards(path)) {
     if (NON_CARD_LAYOUTS.has(raw.layout ?? "")) continue;
-    const card = toCard(raw);
+    const card = toCardData(raw);
     byName.set(normalizeCardName(card.name), card);
     if (card.faces.length > 1) {
       for (const face of card.faces) {
