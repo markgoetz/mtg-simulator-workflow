@@ -10,7 +10,7 @@ const BULK_DATA_URL = "https://api.scryfall.com/bulk-data/oracle-cards";
 // Scryfall asks automated clients to send a descriptive User-Agent and an Accept header.
 const HEADERS = { "User-Agent": "mtg-simulator-workflow/0.1", Accept: "application/json" };
 
-export interface BulkDataInfo {
+interface BulkDataInfo {
   type: string;
   /** Gzipped JSON Lines: one card object per line. */
   jsonl_download_uri: string;
@@ -18,8 +18,8 @@ export interface BulkDataInfo {
 }
 
 /** Fetches the metadata describing the Oracle Cards bulk file (not the file itself). */
-export async function fetchBulkDataInfo(fetchFn: typeof fetch = fetch): Promise<BulkDataInfo> {
-  const response = await fetchFn(BULK_DATA_URL, { headers: HEADERS });
+async function fetchBulkDataInfo(): Promise<BulkDataInfo> {
+  const response = await fetch(BULK_DATA_URL, { headers: HEADERS });
   if (!response.ok) throw new Error(`Scryfall bulk-data request failed: ${response.status} ${response.statusText}`);
   return (await response.json()) as BulkDataInfo;
 }
