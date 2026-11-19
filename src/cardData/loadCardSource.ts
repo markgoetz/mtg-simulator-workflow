@@ -60,7 +60,7 @@ function toCard(raw: ScryfallCard): Card {
     layout: raw.layout ?? "normal",
     manaCost: raw.mana_cost ?? (split ? faces.map((f) => f.manaCost).join(" // ") : front.manaCost),
     typeLine: raw.type_line ?? faces.map((f) => f.typeLine).join(" // "),
-    oracleText: raw.oracle_text ?? front.oracleText,
+    oracleText: raw.oracle_text ?? (split ? faces.map((f) => f.oracleText).join("\n//\n") : front.oracleText),
     colorIdentity: raw.color_identity ?? [],
     faces,
   };
@@ -70,7 +70,9 @@ function toCard(raw: ScryfallCard): Card {
 const NON_CARD_LAYOUTS = new Set(["art_series", "token", "double_faced_token", "emblem"]);
 
 function isScryfallCard(value: unknown): value is ScryfallCard {
-  return typeof value === "object" && value !== null && typeof (value as ScryfallCard).name === "string";
+  if (typeof value !== "object" || value === null) return false;
+  const card = value as ScryfallCard;
+  return typeof card.name === "string" && (typeof card.type_line === "string" || Array.isArray(card.card_faces));
 }
 
 function readCards(path: string): ScryfallCard[] {
@@ -80,7 +82,7 @@ function readCards(path: string): ScryfallCard[] {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
       throw new Error(`Card cache not found at ${path}. ${REFRESH_HINT}`, { cause: error });
-    throw error;
+    throw new Error(`Could not read card cache at ${path}: ${(error as Error).message}`, { cause: error });
   }
   const cards: ScryfallCard[] = [];
   text.split(/\r?\n/).forEach((line, index) => {

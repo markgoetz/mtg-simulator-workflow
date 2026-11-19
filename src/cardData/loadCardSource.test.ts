@@ -56,6 +56,12 @@ describe("loadCardSource multi-face cards", () => {
     expect(card?.manaCost).toBe("{1}{R} // {1}{U}");
   });
 
+  it("joins the faces' oracle text for a split card", () => {
+    expect(source().lookup("Wear // Tear")?.oracleText).toBe(
+      "Destroy target artifact.\n//\nDestroy target enchantment.",
+    );
+  });
+
   it("matches a double-faced card by its front or back face name", () => {
     expect(source().lookup("Delver of Secrets")?.name).toBe("Delver of Secrets // Insectile Aberration");
     expect(source().lookup("Insectile Aberration")?.name).toBe("Delver of Secrets // Insectile Aberration");
@@ -91,6 +97,17 @@ describe("loadCardSource cache errors", () => {
     const path = join(mkdtempSync(join(tmpdir(), "cache-")), "oracle-cards.jsonl");
     writeFileSync(path, "\n");
     expect(() => loadCardSource(path)).toThrow(/is corrupt \(no cards\).*npm run cards:refresh/);
+  });
+
+  it("says the cache could not be read, without a refresh hint, for other read errors", () => {
+    const dir = mkdtempSync(join(tmpdir(), "cache-"));
+    expect(() => loadCardSource(dir)).toThrow(/^Could not read card cache at .*: /);
+  });
+
+  it("treats a line that has a name but no type line or faces as corrupt", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "cache-")), "oracle-cards.jsonl");
+    writeFileSync(path, '{"name":"Sol Ring","type_line":"Artifact"}\n{"name":"Half A Card"}\n');
+    expect(() => loadCardSource(path)).toThrow(/line 2 is not a card/);
   });
 
   it("tells the user how to refresh when the cache has the wrong shape", () => {
