@@ -21,12 +21,18 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 - **The CLI is thin:** it parses arguments, calls the domain folders and prints. It holds no parsing or simulation logic.
 - **Card effect data** (ADR 0001): the effect schema and validator are code in `src/effectSchema/`. Validated, cached translations are committed JSON in `data/effects/`, one file per card. Raw downloaded card data goes in `data/cards/`, which is gitignored and fetched by a script. Tests use small fixtures and never fetch it.
 - This is a single npm package; do not split into workspaces unless a second deployable appears.
-- `npm run check:deps` (dependency-cruiser) enforces the barrel and dependency-direction rules. `npm run check` runs the typecheck, the dependency check and the tests.
+- `npm run check:deps` (dependency-cruiser) enforces the barrel and dependency-direction rules.
 
 ## TypeScript
 
 - `strict` mode stays on; fix type errors rather than suppressing them.
-- Run `npm run typecheck` regularly and `npm run check` before committing.
+- Run `npm run typecheck` regularly. TypeScript is pinned to 6.0.x because `typescript-eslint` and `dependency-cruiser` do not support 7 yet; upgrade once both do.
+
+## Linting, formatting and checks
+
+- **ESLint** (`npm run lint`) uses the `typescript-eslint` recommended rules and fails source files over 200 lines (test files are exempt).
+- **Prettier** (`npm run format` to fix, `npm run format:check` to verify) owns all formatting. Do not argue style in review; run the formatter.
+- **`npm run check`** runs the typecheck, lint, format check, dependency check and tests. A husky **pre-commit hook** runs it, so a commit that fails any of these is rejected. Do not bypass it with `--no-verify`.
 
 ## Testing
 

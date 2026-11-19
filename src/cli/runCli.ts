@@ -19,5 +19,9 @@ export default function runCli(argv: string[]): string {
 
   const { commander, cards } = parseDecklist(readFileSync(path, "utf8"), { commander: values.commander });
   const total = cards.reduce((sum, c) => sum + c.quantity, 0);
-  return [`Commander: ${formatCard(commander, false)}`, `Cards (${total}):`, ...cards.map((c) => `  ${formatCard(c, true)}`)].join("\n");
+  return [
+    `Commander: ${formatCard(commander, false)}`,
+    `Cards (${total}):`,
+    ...cards.map((c) => `  ${formatCard(c, true)}`),
+  ].join("\n");
 }

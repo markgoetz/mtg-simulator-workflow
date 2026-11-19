@@ -25,7 +25,6 @@ module.exports = {
   ],
   options: {
     tsConfig: { fileName: "tsconfig.json" },
-    parser: "swc",
     doNotFollow: { path: "node_modules" },
   },
 };

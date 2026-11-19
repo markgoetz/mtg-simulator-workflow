@@ -15,7 +15,14 @@ describe("parseDecklist", () => {
   });
 
   it("parses set and collector-number suffixes", () => {
-    const text = ["Commander", "1 Atraxa, Praetors' Voice (CM2) 10", "Deck", "1 Sol Ring (C21) 263", "1 Wear // Tear (DGM) 135", "1 Island (UNF) 235★"].join("\n");
+    const text = [
+      "Commander",
+      "1 Atraxa, Praetors' Voice (CM2) 10",
+      "Deck",
+      "1 Sol Ring (C21) 263",
+      "1 Wear // Tear (DGM) 135",
+      "1 Island (UNF) 235★",
+    ].join("\n");
 
     expect(parseDecklist(text)).toEqual({
       commander: { name: "Atraxa, Praetors' Voice", quantity: 1, set: "CM2", collectorNumber: "10" },
@@ -40,7 +47,9 @@ describe("parseDecklist", () => {
   });
 
   it("lets the commander option override the Commander section", () => {
-    const text = ["Commander", "1 Atraxa, Praetors' Voice", "Deck", "1 Sol Ring", "1 Kenrith, the Returned King"].join("\n");
+    const text = ["Commander", "1 Atraxa, Praetors' Voice", "Deck", "1 Sol Ring", "1 Kenrith, the Returned King"].join(
+      "\n",
+    );
 
     const result = parseDecklist(text, { commander: "Kenrith, the Returned King" });
 

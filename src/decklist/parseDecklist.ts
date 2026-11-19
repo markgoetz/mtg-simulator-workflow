@@ -39,7 +39,9 @@ export default function parseDecklist(text: string, options: ParseOptions = {}):
     }
     const match = CARD_LINE.exec(line);
     if (!match) {
-      throw new Error(`Malformed Decklist line ${index + 1}: "${line}" (expected "<quantity> <card name> [(SET) <collector number>]")`);
+      throw new Error(
+        `Malformed Decklist line ${index + 1}: "${line}" (expected "<quantity> <card name> [(SET) <collector number>]")`,
+      );
     }
     const card: DecklistCard = { name: match[2]!, quantity: Number(match[1]) };
     if (match[3] !== undefined) {
@@ -49,9 +51,10 @@ export default function parseDecklist(text: string, options: ParseOptions = {}):
     entries.push({ card, inCommanderSection });
   });
 
-  const commanderEntry = options.commander !== undefined
-    ? entries.find((e) => e.card.name.toLowerCase() === options.commander!.toLowerCase())
-    : entries.find((e) => e.inCommanderSection);
+  const commanderEntry =
+    options.commander !== undefined
+      ? entries.find((e) => e.card.name.toLowerCase() === options.commander!.toLowerCase())
+      : entries.find((e) => e.inCommanderSection);
 
   if (!commanderEntry) {
     throw new Error(
