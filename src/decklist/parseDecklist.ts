@@ -3,6 +3,8 @@ export interface DecklistCard {
   quantity: number;
   set?: string;
   collectorNumber?: string;
+  /** 1-based line number in the Decklist text. */
+  line: number;
 }
 
 export interface Decklist {
@@ -66,7 +68,7 @@ export default function parseDecklist(text: string, options: ParseOptions = {}):
         `Malformed Decklist line ${index + 1}: "${line}" (expected "<quantity> <card name> [(SET) <collector number>]")`,
       );
     }
-    const card: DecklistCard = { name: match[2]!, quantity: Number(match[1]) };
+    const card: DecklistCard = { name: match[2]!, quantity: Number(match[1]), line: index + 1 };
     if (match[3] !== undefined) {
       card.set = match[3];
       card.collectorNumber = match[4]!;

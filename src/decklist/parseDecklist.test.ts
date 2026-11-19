@@ -6,12 +6,21 @@ describe("parseDecklist", () => {
     const text = ["Commander", "1 Atraxa, Praetors' Voice", "", "Deck", "1 Sol Ring", "10 Forest"].join("\n");
 
     expect(parseDecklist(text)).toEqual({
-      commander: { name: "Atraxa, Praetors' Voice", quantity: 1 },
+      commander: { name: "Atraxa, Praetors' Voice", quantity: 1, line: expect.any(Number) },
       cards: [
-        { name: "Sol Ring", quantity: 1 },
-        { name: "Forest", quantity: 10 },
+        { name: "Sol Ring", quantity: 1, line: expect.any(Number) },
+        { name: "Forest", quantity: 10, line: expect.any(Number) },
       ],
     });
+  });
+
+  it("records the 1-based line each card came from", () => {
+    const text = ["Commander", "1 Atraxa, Praetors' Voice", "", "Deck", "1 Sol Ring", "10 Forest"].join("\n");
+
+    const { commander, cards } = parseDecklist(text);
+
+    expect(commander.line).toBe(2);
+    expect(cards.map((c) => c.line)).toEqual([5, 6]);
   });
 
   it("parses set and collector-number suffixes", () => {
@@ -25,11 +34,17 @@ describe("parseDecklist", () => {
     ].join("\n");
 
     expect(parseDecklist(text)).toEqual({
-      commander: { name: "Atraxa, Praetors' Voice", quantity: 1, set: "CM2", collectorNumber: "10" },
+      commander: {
+        name: "Atraxa, Praetors' Voice",
+        quantity: 1,
+        line: expect.any(Number),
+        set: "CM2",
+        collectorNumber: "10",
+      },
       cards: [
-        { name: "Sol Ring", quantity: 1, set: "C21", collectorNumber: "263" },
-        { name: "Wear // Tear", quantity: 1, set: "DGM", collectorNumber: "135" },
-        { name: "Island", quantity: 1, set: "UNF", collectorNumber: "235★" },
+        { name: "Sol Ring", quantity: 1, line: expect.any(Number), set: "C21", collectorNumber: "263" },
+        { name: "Wear // Tear", quantity: 1, line: expect.any(Number), set: "DGM", collectorNumber: "135" },
+        { name: "Island", quantity: 1, line: expect.any(Number), set: "UNF", collectorNumber: "235★" },
       ],
     });
   });
@@ -38,10 +53,16 @@ describe("parseDecklist", () => {
     const text = ["1 Sol Ring", "1 Atraxa, Praetors' Voice (CM2) 10", "10 Forest"].join("\n");
 
     expect(parseDecklist(text, { commander: "Atraxa, Praetors' Voice" })).toEqual({
-      commander: { name: "Atraxa, Praetors' Voice", quantity: 1, set: "CM2", collectorNumber: "10" },
+      commander: {
+        name: "Atraxa, Praetors' Voice",
+        quantity: 1,
+        line: expect.any(Number),
+        set: "CM2",
+        collectorNumber: "10",
+      },
       cards: [
-        { name: "Sol Ring", quantity: 1 },
-        { name: "Forest", quantity: 10 },
+        { name: "Sol Ring", quantity: 1, line: expect.any(Number) },
+        { name: "Forest", quantity: 10, line: expect.any(Number) },
       ],
     });
   });
@@ -74,7 +95,9 @@ describe("parseDecklist", () => {
   it("ignores a trailing foil/etched marker after the set and collector number", () => {
     const text = ["Commander", "1 Atraxa", "Deck", "1 Sol Ring (C21) 263 *F*"].join("\n");
 
-    expect(parseDecklist(text).cards).toEqual([{ name: "Sol Ring", quantity: 1, set: "C21", collectorNumber: "263" }]);
+    expect(parseDecklist(text).cards).toEqual([
+      { name: "Sol Ring", quantity: 1, line: expect.any(Number), set: "C21", collectorNumber: "263" },
+    ]);
   });
 
   describe("Moxfield layout (commander listed last, after a blank line)", () => {
@@ -82,10 +105,16 @@ describe("parseDecklist", () => {
 
     it("takes the commander from the final blank-line-separated block", () => {
       expect(parseDecklist(moxfield)).toEqual({
-        commander: { name: "Atraxa, Praetors' Voice", quantity: 1, set: "CM2", collectorNumber: "10" },
+        commander: {
+          name: "Atraxa, Praetors' Voice",
+          quantity: 1,
+          line: expect.any(Number),
+          set: "CM2",
+          collectorNumber: "10",
+        },
         cards: [
-          { name: "Sol Ring", quantity: 1, set: "C21", collectorNumber: "263" },
-          { name: "Forest", quantity: 10 },
+          { name: "Sol Ring", quantity: 1, line: expect.any(Number), set: "C21", collectorNumber: "263" },
+          { name: "Forest", quantity: 10, line: expect.any(Number) },
         ],
       });
     });

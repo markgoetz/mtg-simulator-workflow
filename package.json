@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "decklist": "tsx src/main.ts",
+    "cards:refresh": "tsx scripts/refreshCards.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:deps": "depcruise src --config .dependency-cruiser.cjs",
