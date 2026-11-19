@@ -224,3 +224,6 @@ __marimo__/
 
 # Node
 node_modules/
+
+# Local Decklists
+decks/
