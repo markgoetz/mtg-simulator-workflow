@@ -22,7 +22,7 @@ interface Entry {
 
 const CARD_LINE = /^(\d+)\s+(.+?)(?:\s+\(([A-Za-z0-9]+)\)\s+(\S+)(?:\s+\*\w+\*)?)?$/;
 
-export function parseDecklist(text: string, options: ParseOptions = {}): Decklist {
+export default function parseDecklist(text: string, options: ParseOptions = {}): Decklist {
   let inCommanderSection = false;
   const entries: Entry[] = [];
 

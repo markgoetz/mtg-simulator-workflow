@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDecklist } from "../src/decklist.js";
+import parseDecklist from "./parseDecklist.js";
 
 describe("parseDecklist", () => {
   it("parses quantities and names, taking the commander from a Commander section", () => {
