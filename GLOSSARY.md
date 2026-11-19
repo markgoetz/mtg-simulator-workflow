@@ -21,8 +21,16 @@ A batch of many games of one decklist, with a seed, a player agent, a horizon an
 _Avoid_: Batch, experiment, job
 
 **Decklist**:
-The 99 cards plus commander being tested, loaded from a local text export.
+The 100 cards being tested, including its one or two commanders, loaded from a local text export.
 _Avoid_: Deck file, list
+
+**Commander**:
+A card that leads the deck and starts in the command zone. A decklist has one or two.
+_Avoid_: General, co-commander, second commander
+
+**Partner**:
+The ability that lets a decklist have two commanders. Which pairings are legal is decided from card data, not from the decklist text.
+_Avoid_: Dual commander, pair
 
 **Game log**:
 The full record of one game: shuffle outcomes, player agent decisions and rules engine events. Findings are computed from game logs.
