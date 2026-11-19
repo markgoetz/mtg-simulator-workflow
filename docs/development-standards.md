@@ -19,11 +19,11 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 - **Import another folder only through its barrel** (`../decklist/index.js`). Files inside a folder may import their siblings directly.
 - **Dependencies flow one way:** `cli` → `run` → (`rulesEngine`, `playerAgent`, `findings`) → (`gameLog`, `cardData`, `decklist`, `effectSchema`). `findings` read only game logs. `playerAgent` sees a game only through a view the rules engine exposes. Nothing imports from `cli` or `run` except the layer above.
 - **`cardData/` resolves Decklist names against the cached Scryfall Oracle file** (Card data in `GLOSSARY.md`). It may import `decklist` through its barrel; `decklist` never imports it.
-- **`scripts/` holds one-off command-line tasks run with `tsx`** (for example `scripts/refreshCards.ts`, behind `npm run cards:refresh`). A script is a thin entry point like `src/main.ts`: it has no default export, keeps its file name, contains no logic and imports domain folders only through their barrels. `check:deps` does not cover it.
+- **`scripts/` holds one-off command-line tasks run with `tsx`** (for example `scripts/refreshCards.ts`, behind `npm run cards:refresh`). A script is a thin entry point like `src/main.ts`: it has no default export, keeps its file name, contains no logic and imports domain folders only through their barrels. `check:deps` covers it too.
 - **The CLI is thin:** it parses arguments, calls the domain folders and prints. It holds no parsing or simulation logic.
 - **Card effect data** (ADR 0001): the effect schema and validator are code in `src/effectSchema/`. Validated, cached translations are committed JSON in `data/effects/`, one file per card. Raw downloaded card data goes in `data/cards/`, which is gitignored and fetched by a script. Tests use small fixtures and never fetch it.
 - This is a single npm package; do not split into workspaces unless a second deployable appears.
-- `npm run check:deps` (dependency-cruiser) enforces the barrel and dependency-direction rules.
+- `npm run check:deps` (dependency-cruiser) enforces the barrel and dependency-direction rules in `src/` and `scripts/`.
 
 ## TypeScript
 

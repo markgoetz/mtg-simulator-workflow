@@ -16,6 +16,13 @@ module.exports = {
       to: { path: "^src/[^/]+/(?!index\\.ts$)" },
     },
     {
+      name: "scripts-use-barrels",
+      severity: "error",
+      comment: "Scripts import domain folders only through their index.ts barrels.",
+      from: { path: "^scripts/" },
+      to: { path: "^src/[^/]+/(?!index\\.ts$)" },
+    },
+    {
       name: "domain-must-not-import-cli",
       severity: "error",
       comment: "Dependencies flow one way: the CLI depends on domain folders, never the reverse.",
