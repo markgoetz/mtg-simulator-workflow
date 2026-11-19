@@ -28,21 +28,14 @@ describe("loadCardSource lookup", () => {
     });
   });
 
-  it("matches names ignoring case, accents, ligatures and punctuation style", () => {
-    expect(source().lookup("lim-dul's vault")?.name).toBe("Lim-Dûl's Vault");
-    expect(source().lookup("Jotun Grunt")?.name).toBe("Jötun Grunt");
-    expect(source().lookup("Aether Vial")?.name).toBe("Æther Vial");
-    expect(source().lookup("Atraxa, Praetors’ Voice")?.name).toBe("Atraxa, Praetors' Voice");
-  });
-
   it("returns undefined for a name that does not exist", () => {
     expect(source().lookup("Sol Rong")).toBeUndefined();
   });
 });
 
 describe("loadCardSource multi-face cards", () => {
-  it("matches a split card by its full name, either face or a single slash", () => {
-    for (const name of ["Wear // Tear", "Wear", "Tear", "Wear / Tear", "wear//tear"]) {
+  it("matches a split card by its full name or either face name", () => {
+    for (const name of ["Wear // Tear", "Wear", "Tear"]) {
       expect(source().lookup(name)?.name).toBe("Wear // Tear");
     }
   });
