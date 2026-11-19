@@ -76,4 +76,44 @@ describe("parseDecklist", () => {
 
     expect(parseDecklist(text).cards).toEqual([{ name: "Sol Ring", quantity: 1, set: "C21", collectorNumber: "263" }]);
   });
+
+  describe("Moxfield layout (commander listed last, after a blank line)", () => {
+    const moxfield = ["1 Sol Ring (C21) 263", "10 Forest", "", "1 Atraxa, Praetors' Voice (CM2) 10"].join("\n");
+
+    it("takes the commander from the final blank-line-separated block", () => {
+      expect(parseDecklist(moxfield)).toEqual({
+        commander: { name: "Atraxa, Praetors' Voice", quantity: 1, set: "CM2", collectorNumber: "10" },
+        cards: [
+          { name: "Sol Ring", quantity: 1, set: "C21", collectorNumber: "263" },
+          { name: "Forest", quantity: 10 },
+        ],
+      });
+    });
+
+    it("ignores trailing blank lines and CRLF line endings", () => {
+      const result = parseDecklist(moxfield.replaceAll("\n", "\r\n") + "\r\n\r\n");
+
+      expect(result.commander.name).toBe("Atraxa, Praetors' Voice");
+      expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring", "Forest"]);
+    });
+
+    it("lets the commander option override the final block", () => {
+      const result = parseDecklist(moxfield, { commander: "Sol Ring" });
+
+      expect(result.commander.name).toBe("Sol Ring");
+      expect(result.cards.map((c) => c.name)).toEqual(["Forest", "Atraxa, Praetors' Voice"]);
+    });
+
+    it("prefers a Commander section over the final block", () => {
+      const text = ["Commander", "1 Kenrith, the Returned King", "", "Deck", "1 Sol Ring", "", "1 Forest"].join("\n");
+
+      expect(parseDecklist(text).commander.name).toBe("Kenrith, the Returned King");
+    });
+
+    it("throws a clear error when the final block holds more than one card", () => {
+      const text = ["1 Sol Ring", "", "1 Tymna the Weaver", "1 Thrasios, Triton Hero"].join("\n");
+
+      expect(() => parseDecklist(text)).toThrow(/final block.*2 cards.*partner/i);
+    });
+  });
 });

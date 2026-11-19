@@ -27,6 +27,14 @@ describe("cli", () => {
     );
   });
 
+  it("reads the commander from the end of a Moxfield export", () => {
+    const { status, stdout } = run(fixture("moxfield-decklist.txt"));
+
+    expect(status).toBe(0);
+    expect(stdout).toContain("Commander: Atraxa, Praetors' Voice (CM2) 10");
+    expect(stdout).toContain("Cards (12):");
+  });
+
   it("takes the commander from --commander when the file has no Commander section", () => {
     const { status, stdout } = run(fixture("no-commander.txt"), "--commander", "Atraxa, Praetors' Voice");
 
