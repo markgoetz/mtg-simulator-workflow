@@ -41,6 +41,11 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 - Expected values come from known literals or worked examples, never from recomputing the code's logic.
 - Fixtures live in a `fixtures/` folder beside the tests that use them (top-level `test/fixtures/` for the cross-folder CLI tests).
 
+## Pull requests
+
+- **Merge PRs with squash merge, always.** Each PR lands on `main` as a single commit; do not use merge commits or rebase merges.
+- **Delete the remote branch after merging.** For example, `gh pr merge --squash --delete-branch`.
+
 ## Domain language
 
 - Use the vocabulary in `GLOSSARY.md` for names in code, tests and error messages (Decklist, Game, Run, Finding, and so on). Avoid the terms the glossary lists under _Avoid_.
