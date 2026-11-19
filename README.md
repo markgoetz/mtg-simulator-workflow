@@ -8,5 +8,5 @@ Run the CLI with the path to a Decklist text export. The `decks/` folder is giti
 
 ```sh
 npm run decklist -- decks/atraxa.txt
-npm run decklist -- decks/atraxa.txt --commander "Atraxa"  # name the commander explicitly
+npm run decklist -- decks/atraxa.txt --commander "Atraxa, Praetors' Voice"  # name the commander explicitly
 ```
