@@ -4,10 +4,9 @@ This repository represents an agentic workflow to simulate playtesting Magic the
 
 ## Usage
 
-Put Decklist text exports in the gitignored `decks/` folder, then run the CLI with the file name:
+Run the CLI with the path to a Decklist text export. The `decks/` folder is gitignored, so it is a good place to keep your own:
 
 ```sh
-npm run decklist -- atraxa.txt                       # reads decks/atraxa.txt
-npm run decklist -- atraxa.txt --commander "Atraxa"  # name the commander explicitly
-npm run decklist -- ./elsewhere/atraxa.txt           # a path with a folder is used as given
+npm run decklist -- decks/atraxa.txt
+npm run decklist -- decks/atraxa.txt --commander "Atraxa"  # name the commander explicitly
 ```
