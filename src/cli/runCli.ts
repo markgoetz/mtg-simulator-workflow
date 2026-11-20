@@ -12,10 +12,10 @@ export default function runCli(argv: string[]): string {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
-    options: { commander: { type: "string" } },
+    options: { commander: { type: "string", multiple: true } },
   });
   const [path] = positionals;
-  if (!path) throw new Error("Usage: decklist <decklist-file> [--commander <name>]");
+  if (!path) throw new Error("Usage: decklist <decklist-file> [--commander <name>]...");
 
   let text: string;
   try {
@@ -26,10 +26,10 @@ export default function runCli(argv: string[]): string {
     throw error;
   }
 
-  const { commander, cards } = parseDecklist(text, { commander: values.commander });
+  const { commanders, cards } = parseDecklist(text, { commanders: values.commander });
   const total = cards.reduce((sum, c) => sum + c.quantity, 0);
   return [
-    `Commander: ${formatCard(commander, false)}`,
+    `${commanders.length === 1 ? "Commander" : "Commanders"}: ${commanders.map((c) => formatCard(c, false)).join(" / ")}`,
     `Cards (${total}):`,
     ...cards.map((c) => `  ${formatCard(c, true)}`),
   ].join("\n");
