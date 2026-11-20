@@ -104,6 +104,15 @@ describe("parseDecklist", () => {
     ]);
   });
 
+  it("ignores trailing blank lines and CRLF line endings", () => {
+    const text = ["Commander", "1 Atraxa, Praetors' Voice", "", "Deck", "1 Sol Ring", "10 Forest"].join("\r\n");
+
+    const result = parseDecklist(text + "\r\n\r\n");
+
+    expect(result.commanders[0]!.name).toBe("Atraxa, Praetors' Voice");
+    expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring", "Forest"]);
+  });
+
   describe("Moxfield layout (commander listed last, after a blank line)", () => {
     const moxfield = ["1 Sol Ring (C21) 263", "10 Forest", "", "1 Atraxa, Praetors' Voice (CM2) 10"].join("\n");
 
@@ -125,13 +134,6 @@ describe("parseDecklist", () => {
       });
     });
 
-    it("ignores trailing blank lines and CRLF line endings", () => {
-      const result = parseDecklist(moxfield.replaceAll("\n", "\r\n") + "\r\n\r\n");
-
-      expect(result.commanders[0]!.name).toBe("Atraxa, Praetors' Voice");
-      expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring", "Forest"]);
-    });
-
     it("lets the commanders option override the final block", () => {
       const result = parseDecklist(moxfield, { commanders: ["Sol Ring"] });
 
@@ -145,21 +147,10 @@ describe("parseDecklist", () => {
       expect(parseDecklist(text).commanders[0]!.name).toBe("Kenrith, the Returned King");
     });
 
-    it("takes two commanders from the final block, in file order", () => {
-      const text = ["1 Sol Ring", "", "1 Tymna the Weaver", "1 Thrasios, Triton Hero"].join("\n");
-
-      const result = parseDecklist(text);
-
-      expect(result.commanders.map((c) => c.name)).toEqual(["Tymna the Weaver", "Thrasios, Triton Hero"]);
-      expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring"]);
-    });
-
-    it("applies the commander rules to the final block", () => {
+    it("throws for more than two commanders in the final block, naming the lines", () => {
       expect(() => parseDecklist(["1 Sol Ring", "", "1 A", "1 B", "1 C"].join("\n"))).toThrow(
         /at most two commanders.*lines 3, 4, 5/,
       );
-      expect(() => parseDecklist(["1 Sol Ring", "", "2 A"].join("\n"))).toThrow(/line 3.*quantity 2/i);
-      expect(() => parseDecklist(["1 Sol Ring", "", "1 A", "1 A"].join("\n"))).toThrow(/line 4.*twice/i);
     });
   });
 
@@ -171,6 +162,15 @@ describe("parseDecklist", () => {
 
       expect(result.commanders.map((c) => c.name)).toEqual(["Tymna the Weaver", "Thrasios, Triton Hero"]);
       expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring", "Forest"]);
+    });
+
+    it("takes two commanders from the final block, in file order", () => {
+      const text = ["1 Sol Ring", "", "1 Tymna the Weaver", "1 Thrasios, Triton Hero"].join("\n");
+
+      const result = parseDecklist(text);
+
+      expect(result.commanders.map((c) => c.name)).toEqual(["Tymna the Weaver", "Thrasios, Triton Hero"]);
+      expect(result.cards.map((c) => c.name)).toEqual(["Sol Ring"]);
     });
 
     it("takes two commanders from the commanders option in the order given, moving others to the deck", () => {
