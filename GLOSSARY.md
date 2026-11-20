@@ -44,8 +44,16 @@ _Avoid_: Bot, AI, pilot
 The deterministic part that keeps a game legal: zones, mana, land drops and turn structure. It decides what is allowed; the player agent decides what to do.
 _Avoid_: Judge, referee
 
+**Card data**:
+The details of one card as the project uses them: name, mana cost, type line, oracle text, color identity and per-face data. Taken from Scryfall's Oracle data.
+_Avoid_: Card record, card object
+
+**Card cache**:
+The list of card data for every card, stored on disk as a download of Scryfall's Oracle bulk file and refreshed on demand. Decklist names are resolved against it; a name it lacks is an unsupported card.
+_Avoid_: Card database, card DB, card source
+
 **Unsupported card**:
-A card the rules engine cannot play correctly, reported with a reason: the effect does not fit the effect schema, its translation failed validation, or it could not be found in the card data. It is flagged in results rather than guessed at.
+A card the rules engine cannot play correctly, reported with a reason: the effect does not fit the effect schema, its translation failed validation, or it could not be found in the card cache. It is flagged in results rather than guessed at.
 _Avoid_: Broken card, unknown card
 
 **Opponent-facing card**:
