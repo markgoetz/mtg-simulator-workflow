@@ -23,7 +23,7 @@ describe("resolveDecklist", () => {
   const result = resolveDecklist(parseDecklist(DECKLIST), cache);
 
   it("resolves the commander and each card to Scryfall card data, keeping quantities", () => {
-    expect(result.commander?.name).toBe("Atraxa, Praetors' Voice");
+    expect(result.commanders.map((c) => c.name)).toEqual(["Atraxa, Praetors' Voice"]);
     expect(result.cards.map((c) => [c.cardData.name, c.quantity])).toEqual([
       ["Sol Ring", 1],
       ["Wear // Tear", 1],
@@ -40,8 +40,11 @@ describe("resolveDecklist", () => {
   });
 
   it("reports a commander that cannot be found", () => {
-    const missing = resolveDecklist(parseDecklist("Commander\n1 Nobody Special\nDeck\n1 Sol Ring"), cache);
-    expect(missing.commander).toBeUndefined();
+    const missing = resolveDecklist(
+      parseDecklist(["Commander", "1 Nobody Special", "Deck", "1 Sol Ring"].join("\n")),
+      cache,
+    );
+    expect(missing.commanders).toEqual([]);
     expect(missing.notFound.map((n) => n.line)).toEqual([2]);
   });
 });

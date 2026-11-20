@@ -13,8 +13,8 @@ export interface CardNotFound {
 }
 
 export interface ResolvedDecklist {
-  /** Undefined when the commander's name is not in the card cache (it is then listed in `notFound`). */
-  commander: CardData | undefined;
+  /** The commanders found in the card cache; any not found are listed in `notFound`. */
+  commanders: CardData[];
   cards: ResolvedCard[];
   notFound: CardNotFound[];
 }
@@ -29,11 +29,14 @@ function notFoundFor(entry: DecklistCard): CardNotFound {
 
 /** Looks up every Decklist card in the card cache; names that do not exist are reported by line. */
 export default function resolveDecklist(decklist: Decklist, cache: CardCache): ResolvedDecklist {
-  const lookups = [decklist.commander, ...decklist.cards].map((entry) => ({ entry, card: cache.lookup(entry.name) }));
+  const lookup = (entry: DecklistCard) => ({ entry, card: cache.lookup(entry.name) });
+  const commanderLookups = decklist.commanders.map(lookup);
+  const cardLookups = decklist.cards.map(lookup);
+  const lookups = [...commanderLookups, ...cardLookups];
 
-  const [commanderLookup, ...cardLookups] = lookups;
+  const commanders = commanderLookups.flatMap(({ card }) => (card ? [card] : []));
   const cards = cardLookups.flatMap(({ entry, card }) => (card ? [{ cardData: card, quantity: entry.quantity }] : []));
   const notFound = lookups.filter(({ card }) => !card).map(({ entry }) => notFoundFor(entry));
 
-  return { commander: commanderLookup?.card, cards, notFound: notFound.sort((a, b) => a.line - b.line) };
+  return { commanders, cards, notFound: notFound.sort((a, b) => a.line - b.line) };
 }
