@@ -47,6 +47,7 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 
 - **Merge PRs with squash merge, always.** Each PR lands on `main` as a single commit; do not use merge commits or rebase merges.
 - **Delete the remote branch after merging.** For example, `gh pr merge --squash --delete-branch`.
+- **Never commit to local `main`.** Work on a branch and merge it through a PR. Squash merges rewrite history, so a commit made on local `main` diverges from `origin/main` once its PR is squashed. Keep local `main` in step with `origin/main` (`git pull --ff-only`).
 
 ## Domain language
 
