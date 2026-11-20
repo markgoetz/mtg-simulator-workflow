@@ -155,9 +155,11 @@ describe("parseDecklist", () => {
     });
 
     it("applies the commander rules to the final block", () => {
-      expect(() => parseDecklist("1 Sol Ring\n\n1 A\n1 B\n1 C")).toThrow(/at most two commanders.*lines 3, 4, 5/);
-      expect(() => parseDecklist("1 Sol Ring\n\n2 A")).toThrow(/line 3.*quantity 2/i);
-      expect(() => parseDecklist("1 Sol Ring\n\n1 A\n1 A")).toThrow(/line 4.*twice/i);
+      expect(() => parseDecklist(["1 Sol Ring", "", "1 A", "1 B", "1 C"].join("\n"))).toThrow(
+        /at most two commanders.*lines 3, 4, 5/,
+      );
+      expect(() => parseDecklist(["1 Sol Ring", "", "2 A"].join("\n"))).toThrow(/line 3.*quantity 2/i);
+      expect(() => parseDecklist(["1 Sol Ring", "", "1 A", "1 A"].join("\n"))).toThrow(/line 4.*twice/i);
     });
   });
 
@@ -184,7 +186,9 @@ describe("parseDecklist", () => {
       const text = ["Commander", "1 A", "1 B", "1 C", "Deck", "1 Sol Ring"].join("\n");
 
       expect(() => parseDecklist(text)).toThrow(/at most two commanders.*3.*lines 2, 3, 4/);
-      expect(() => parseDecklist("1 A\n1 B\n1 C", { commanders: ["A", "B", "C"] })).toThrow(/at most two/);
+      expect(() => parseDecklist(["1 A", "1 B", "1 C"].join("\n"), { commanders: ["A", "B", "C"] })).toThrow(
+        /at most two/,
+      );
     });
 
     it("throws for a commander with a quantity above 1", () => {
@@ -195,8 +199,10 @@ describe("parseDecklist", () => {
     });
 
     it("throws for a Commander section that is present but empty", () => {
-      expect(() => parseDecklist("Commander\n\nDeck\n1 Sol Ring")).toThrow(/"Commander" section.*empty/);
-      expect(() => parseDecklist("1 Sol Ring\nCommander")).toThrow(/"Commander" section.*empty/);
+      expect(() => parseDecklist(["Commander", "", "Deck", "1 Sol Ring"].join("\n"))).toThrow(
+        /"Commander" section.*empty/,
+      );
+      expect(() => parseDecklist(["1 Sol Ring", "Commander"].join("\n"))).toThrow(/"Commander" section.*empty/);
     });
 
     it("throws when the same card is given twice as a commander", () => {

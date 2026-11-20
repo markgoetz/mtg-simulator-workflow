@@ -40,7 +40,10 @@ describe("resolveDecklist", () => {
   });
 
   it("reports a commander that cannot be found", () => {
-    const missing = resolveDecklist(parseDecklist("Commander\n1 Nobody Special\nDeck\n1 Sol Ring"), cache);
+    const missing = resolveDecklist(
+      parseDecklist(["Commander", "1 Nobody Special", "Deck", "1 Sol Ring"].join("\n")),
+      cache,
+    );
     expect(missing.commanders).toEqual([]);
     expect(missing.notFound.map((n) => n.line)).toEqual([2]);
   });
