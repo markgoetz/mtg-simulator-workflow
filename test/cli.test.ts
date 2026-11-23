@@ -6,34 +6,35 @@ const cli = fileURLToPath(new URL("../src/main.ts", import.meta.url));
 const fixture = (name: string) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const cards = fileURLToPath(new URL("../src/cardData/fixtures/oracle-cards-sample.jsonl", import.meta.url));
 
+function events(stdout: string): Record<string, unknown>[] {
+  return stdout
+    .trimEnd()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+}
+
 function run(...args: string[]) {
   const result = spawnSync(process.execPath, ["--import", "tsx", cli, ...args], { encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 describe("cli", () => {
-  it("prints the parsed commander and card list for a Decklist file", () => {
+  it("plays a Game for a Decklist file, taking the commander and library from it", () => {
     const { status, stdout } = run(fixture("sample-decklist.txt"), "--cards", cards);
+    const [setup, shuffle] = events(stdout);
 
     expect(status).toBe(0);
-    expect(stdout).toBe(
-      [
-        "Commander: Atraxa, Praetors' Voice (CM2) 10",
-        "Cards (99):",
-        "  1 Sol Ring (C21) 263",
-        "  1 Arcane Signet (C21) 297",
-        "  97 Forest",
-        "",
-      ].join("\n"),
-    );
+    expect(setup).toMatchObject({ type: "setup", commanders: ["Atraxa, Praetors' Voice"] });
+    expect(shuffle?.library).toHaveLength(99);
   });
 
   it("reads the commander from the end of a Moxfield export", () => {
     const { status, stdout } = run(fixture("moxfield-decklist.txt"), "--cards", cards);
+    const [setup, shuffle] = events(stdout);
 
     expect(status).toBe(0);
-    expect(stdout).toContain("Commander: Atraxa, Praetors' Voice (CM2) 10");
-    expect(stdout).toContain("Cards (99):");
+    expect(setup).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"] });
+    expect(shuffle?.library).toHaveLength(99);
   });
 
   it("takes the commander from --commander when the file has no Commander section", () => {
@@ -66,5 +67,65 @@ describe("cli", () => {
 
     expect(status).toBe(1);
     expect(stderr).toMatch(/commander/i);
+  });
+
+  describe("choosing the Game", () => {
+    const play = (...extra: string[]) => run(fixture("sample-decklist.txt"), "--cards", cards, ...extra);
+    const lines = (stdout: string) => stdout.trimEnd().split("\n");
+
+    it("plays one Game to the default Horizon of 6 and prints the Game log as JSON lines", () => {
+      const { status, stdout } = play("--seed", "1");
+
+      expect(status).toBe(0);
+      expect(lines(stdout)).toHaveLength(2 + 7 + 6 * 4);
+      expect(lines(stdout)[0]).toBe(
+        `{"seq":0,"type":"setup","turn":0,"commanders":["Atraxa, Praetors' Voice"],"seed":1}`,
+      );
+      expect(lines(stdout).at(-1)).toBe('{"seq":32,"type":"turn-end","turn":6}');
+    });
+
+    it("plays to the Horizon given by --horizon", () => {
+      expect(lines(play("--seed", "1", "--horizon", "2").stdout)).toHaveLength(2 + 7 + 2 * 4);
+    });
+
+    it("prints the same Game log for the same seed and a different shuffle for a different seed", () => {
+      const shuffle = (seed: string) => lines(play("--seed", seed).stdout)[1];
+
+      expect(shuffle("5")).toBe(shuffle("5"));
+      expect(shuffle("5")).not.toBe(shuffle("6"));
+    });
+
+    it("still refuses an invalid Decklist", () => {
+      const { status, stdout, stderr } = run(fixture("invalid-decklist.txt"), "--cards", cards, "--seed", "1");
+
+      expect(status).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain("The Decklist is not valid for Commander");
+    });
+
+    it.each(["abc", "-1", "1.5", "4294967296"])("rejects the seed %s, naming the option", (seed) => {
+      const { status, stderr } = play(`--seed=${seed}`);
+
+      expect(status).toBe(1);
+      expect(stderr).toContain(`--seed must be an integer from 0 to 4294967295, got "${seed}"`);
+    });
+
+    it.each(["0", "abc", "-2"])("rejects the horizon %s, naming the option", (horizon) => {
+      const { status, stderr } = play("--seed", "1", `--horizon=${horizon}`);
+
+      expect(status).toBe(1);
+      expect(stderr).toContain(`--horizon must be a positive integer, got "${horizon}"`);
+    });
+
+    it("plays a Game with a randomly chosen seed, written in the Game log, when --seed is not given", () => {
+      const { status, stdout } = play("--horizon", "2");
+      const [setup] = events(stdout);
+
+      expect(status).toBe(0);
+      expect(lines(stdout)).toHaveLength(2 + 7 + 2 * 4);
+      expect(Number.isInteger(setup?.seed)).toBe(true);
+      expect(setup?.seed).toBeGreaterThanOrEqual(0);
+      expect(setup?.seed).toBeLessThanOrEqual(4294967295);
+    });
   });
 });

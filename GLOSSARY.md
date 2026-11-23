@@ -13,12 +13,12 @@ One goldfish played from opening hand through the end of the horizon.
 _Avoid_: Simulation, iteration, trial
 
 **Horizon**:
-The number of turns a game is played, six by default.
+The number of turns a game is played, set in the batch's configuration and six by default.
 _Avoid_: Game length, turn limit
 
-**Run**:
-A batch of many games of one decklist, with a seed, a player agent, a horizon and a budget, whose findings are reported together.
-_Avoid_: Batch, experiment, job
+**Batch**:
+A set of many games of one decklist, with a seed, a player agent, a horizon and a budget, whose findings are reported together.
+_Avoid_: Run, experiment, job
 
 **Decklist**:
 The 100 cards being tested, including its one or two commanders, loaded from a local text export.
@@ -43,6 +43,10 @@ _Avoid_: Bot, AI, pilot
 **Rules engine**:
 The deterministic part that keeps a game legal: zones, mana, land drops and turn structure. It decides what is allowed; the player agent decides what to do.
 _Avoid_: Judge, referee
+
+**Game view**:
+What the player agent is allowed to see of a game at a decision: its own hand, the cards it has played, the command zone, the turn and the size of the library. The rules engine builds it; the player agent only reads it.
+_Avoid_: Game state, snapshot, observation
 
 **Card data**:
 The details of one card as the project uses them: name, mana cost, type line, oracle text, color identity and per-face data. Taken from Scryfall's Oracle data.

@@ -8,19 +8,21 @@ import runCli from "./runCli.js";
 const CARDS = fileURLToPath(new URL("../cardData/fixtures/oracle-cards-sample.jsonl", import.meta.url));
 const DECKLIST = ["1 Sol Ring", "98 Forest", "", "1 Atraxa, Praetors' Voice"].join("\n");
 
+const events = (out: string): Record<string, unknown>[] => out.split("\n").map((line) => JSON.parse(line));
+
 describe("runCli decklist file location", () => {
   it("reads the Decklist from the path as given", () => {
     const path = join(mkdtempSync(join(tmpdir(), "runCli-")), "atraxa.txt");
     writeFileSync(path, DECKLIST);
 
-    expect(runCli([path, "--cards", CARDS])).toContain("Commander: Atraxa, Praetors' Voice");
+    expect(events(runCli([path, "--cards", CARDS]))[0]).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"] });
   });
 
   it("does not look in a decks folder for a bare file name", () => {
     expect(() => runCli(["missing.txt"])).toThrow(/^Decklist file not found: missing\.txt$/);
   });
 
-  it("prints Commanders: for a partner pair, and accepts --commander twice", () => {
+  it("plays with both commanders in the command zone for a partner pair, and accepts --commander twice", () => {
     const path = join(mkdtempSync(join(tmpdir(), "runCli-")), "partners.txt");
     writeFileSync(path, ["1 Sol Ring", "97 Forest", "1 Tymna the Weaver", "1 Thrasios, Triton Hero"].join("\n"));
 
@@ -34,11 +36,12 @@ describe("runCli decklist file location", () => {
       CARDS,
     ]);
 
-    expect(out.split("\n")[0]).toBe("Commanders: Tymna the Weaver / Thrasios, Triton Hero");
-    expect(out).toContain("Cards (98):");
+    const [setup, shuffle] = events(out);
+    expect(setup).toMatchObject({ commanders: ["Tymna the Weaver", "Thrasios, Triton Hero"] });
+    expect(shuffle?.library).toHaveLength(98);
   });
 
-  it("lets --commander replace the Commander section and prints Commander: for one", () => {
+  it("lets --commander replace the Commander section", () => {
     const path = join(mkdtempSync(join(tmpdir(), "runCli-")), "replace.txt");
     writeFileSync(
       path,
@@ -47,10 +50,8 @@ describe("runCli decklist file location", () => {
 
     const out = runCli([path, "--commander", "Atraxa, Praetors' Voice", "--cards", CARDS]);
 
-    expect(out.split("\n").slice(0, 3)).toEqual([
-      "Commander: Atraxa, Praetors' Voice",
-      "Cards (99):",
-      "  1 Tymna the Weaver",
-    ]);
+    const [setup, shuffle] = events(out);
+    expect(setup).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"] });
+    expect(shuffle?.library).toContain("Tymna the Weaver");
   });
 });

@@ -13,11 +13,11 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 
 ## Folder structure
 
-- **Organise `src/` by domain concept**, one camelCase folder per concept from `GLOSSARY.md` (`decklist/`, `cardData/`, `rulesEngine/`, `playerAgent/`, `gameLog/`, `findings/`, `run/`). Create a folder only when its concept has code. No catch-all `shared/` or `types/` folders: a type lives with the concept that owns it.
+- **Organise `src/` by domain concept**, one camelCase folder per concept from `GLOSSARY.md` (`decklist/`, `cardData/`, `rulesEngine/`, `playerAgent/`, `gameView/`, `gameLog/`, `findings/`, `batch/`). Create a folder only when its concept has code. No catch-all `shared/` or `types/` folders: a type lives with the concept that owns it.
 - **Colocate tests** next to the file they test. Fixtures live in a `fixtures/` folder inside the owning folder. End-to-end tests that cross folders, such as the CLI process tests, live in the top-level `test/`.
 - **Every folder that other folders use has an `index.ts` barrel.** A barrel contains only re-exports of what other folders may use, and no logic. Tests and anything not re-exported are private to the folder.
 - **Import another folder only through its barrel** (`../decklist/index.js`). Files inside a folder may import their siblings directly.
-- **Dependencies flow one way:** `cli` → `run` → (`rulesEngine`, `playerAgent`, `findings`) → (`gameLog`, `cardData`, `decklist`, `effectSchema`). `findings` read only game logs. `playerAgent` sees a game only through a view the rules engine exposes. Nothing imports from `cli` or `run` except the layer above.
+- **Dependencies flow one way:** `cli` → `batch` → (`rulesEngine`, `playerAgent`, `findings`) → (`gameView`, `gameLog`, `cardData`, `decklist`, `effectSchema`). `findings` read only game logs. `playerAgent` sees a game only through the Game view in `gameView/`, which `rulesEngine` builds; `rulesEngine` and `playerAgent` never import each other. Nothing imports from `cli` or `batch` except the layer above.
 - **`cardData/` resolves Decklist names against the card cache** (Card data and Card cache in `GLOSSARY.md`). It may import `decklist` through its barrel; `decklist` never imports it.
 - **`scripts/` holds one-off command-line tasks run with `tsx`** (for example `scripts/refreshCards.ts`, behind `npm run cards:refresh`). A script is a thin entry point like `src/main.ts`: it has no default export, keeps its file name, contains no logic and imports domain folders only through their barrels. `check:deps` covers it too.
 - **The CLI is thin:** it parses arguments, calls the domain folders and prints. It holds no parsing or simulation logic.
@@ -51,7 +51,7 @@ Coding standards for this repo. `/code-review` checks changes against this docum
 
 ## Domain language
 
-- Use the vocabulary in `GLOSSARY.md` for names in code, tests and error messages (Decklist, Game, Run, Finding, and so on). Avoid the terms the glossary lists under _Avoid_.
+- Use the vocabulary in `GLOSSARY.md` for names in code, tests and error messages (Decklist, Game, Batch, Finding, and so on). Avoid the terms the glossary lists under _Avoid_.
 - Respect the decisions in `docs/adr/`.
 
 ## Errors
