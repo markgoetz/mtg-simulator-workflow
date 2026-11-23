@@ -23,7 +23,7 @@ function rowsFor(error: CommanderRuleError): string[][] {
       ];
     }
     case "cardsNotFound":
-      return error.cards.map((c) => ["Card not found", String(c.line), c.name, "Not in the card cache"]);
+      return error.cards.map((c) => ["Card not found", String(c.line), c.name, "Unknown card"]);
     case "colorIdentity":
       return error.cards.map((c) => [
         "Color identity",

@@ -32,7 +32,7 @@ describe("formatErrorsAsMarkdownTable", () => {
       "| Rule | Line(s) | Card | Problem |",
       "| --- | --- | --- | --- |",
       "| Card count |  |  | Decklist has 98 cards, but must have exactly 100 (including its Commander) |",
-      "| Card not found | 7 | Sol Rong | Not in the card cache |",
+      "| Card not found | 7 | Sol Rong | Unknown card |",
       "| Color identity | 4 | Lightning Bolt | Card is R; the Commander's color identity is WB |",
       "| Singleton | 5, 6 | Rhystic Study | 2 copies; only 1 allowed |",
       expect.stringMatching(
