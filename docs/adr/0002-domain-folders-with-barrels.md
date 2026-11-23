@@ -1,6 +1,6 @@
 # Source is organised by domain concept, with barrel files as each folder's public surface
 
-`src/` has one folder per glossary concept (decklist, rules engine, player agent, game log, findings, run). Each folder has an `index.ts` barrel that re-exports only what other folders may use, and other folders import only through it. Tests are colocated, so the barrel is what keeps tests and internals out of other folders' view. A `dependency-cruiser` check enforces the barrel rule and a one-way dependency direction.
+`src/` has one folder per glossary concept (decklist, rules engine, player agent, game log, findings, batch). Each folder has an `index.ts` barrel that re-exports only what other folders may use, and other folders import only through it. Tests are colocated, so the barrel is what keeps tests and internals out of other folders' view. A `dependency-cruiser` check enforces the barrel rule and a one-way dependency direction.
 
 Files are otherwise named after their default export, so barrels and the `src/main.ts` entry point are the two named exceptions.
 
