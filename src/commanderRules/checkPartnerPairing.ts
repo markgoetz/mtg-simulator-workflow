@@ -1,25 +1,9 @@
-import type { CardData } from "../cardData/index.js";
+import { hasKeyword, partnerWithName, type CardData } from "../cardData/index.js";
 import type { Decklist } from "../decklist/index.js";
 import type CommanderRuleError from "./CommanderRuleError.js";
 
 /** Keywords that let two commanders pair when both have the same one. */
 const SHARED_KEYWORDS = ["Partner", "Friends forever", "Character select", "Partner—Survivors", "Partner—Father & Son"];
-
-function oracleLines(card: CardData): string[] {
-  return card.faces.flatMap((face) => face.oracleText.split("\n").map((line) => line.trim()));
-}
-
-function hasKeyword(card: CardData, keyword: string): boolean {
-  return oracleLines(card).some((line) => line === keyword || line.startsWith(`${keyword} (`));
-}
-
-function partnerWithName(card: CardData): string | undefined {
-  for (const line of oracleLines(card)) {
-    const match = /^Partner with (.+?)(?: \(|$)/.exec(line);
-    if (match) return match[1]!.toLowerCase();
-  }
-  return undefined;
-}
 
 function isLegalPair(a: CardData, b: CardData): boolean {
   if (SHARED_KEYWORDS.some((keyword) => hasKeyword(a, keyword) && hasKeyword(b, keyword))) return true;
