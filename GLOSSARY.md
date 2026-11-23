@@ -53,8 +53,8 @@ The list of card data for every card, stored on disk as a download of Scryfall's
 _Avoid_: Card database, card DB, card source
 
 **Unsupported card**:
-A card the rules engine cannot play correctly, reported with a reason: the effect does not fit the effect schema, its translation failed validation, or it could not be found in the card cache. It is flagged in results rather than guessed at.
-_Avoid_: Broken card, unknown card
+A card the rules engine cannot play correctly, reported with a reason: the effect does not fit the effect schema, its translation failed validation, or it could not be found in the card cache. It is flagged in results rather than guessed at. A name missing from the card cache is also called an **Unknown card** in Decklist validation errors.
+_Avoid_: Broken card
 
 **Opponent-facing card**:
 A card whose effect only matters with opponents present, such as "each opponent discards a card". It is noted in the report but is not an unsupported card; in a goldfish its opponent-facing part does nothing.
