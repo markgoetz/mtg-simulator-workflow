@@ -31,8 +31,13 @@ export default function runBatch(decklist: Decklist, config: BatchConfig, deps: 
   game.start();
   while (!game.isOver()) {
     game.startTurn();
-    deps.playerAgent.chooseAction(game.view());
-    recorder.record({ type: "pass", turn: game.view().turn });
+    const view = game.view();
+    const action = deps.playerAgent.chooseAction(view);
+    switch (action.type) {
+      case "pass":
+        recorder.record({ type: "pass", turn: view.turn });
+        break;
+    }
     game.endTurn();
   }
   return { gameLogs: [recorder.log()] };

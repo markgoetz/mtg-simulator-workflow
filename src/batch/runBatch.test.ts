@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { loadCardCache } from "../cardData/index.js";
 import { parseDecklist } from "../decklist/index.js";
 import type { GameLog } from "../gameLog/index.js";
-import { scriptedAgent } from "../playerAgent/index.js";
+import type { GameView } from "../gameView/index.js";
+import { scriptedAgent, type PlayerAgent } from "../playerAgent/index.js";
 import runBatch from "./runBatch.js";
 
 const cardCache = loadCardCache(
@@ -122,5 +123,23 @@ describe("runBatch", () => {
   it("fails clearly when the Horizon draws more cards than the library holds", () => {
     // 15 cards: the opening hand of 7 plus 8 turns of draws empties it, so turn 9 cannot draw.
     expect(() => playGame({ horizon: 9 })).toThrow("Cannot draw on turn 9: the library is empty");
+  });
+
+  it("asks the Player agent once a turn, showing the turn, its hand, the command zone and the library size", () => {
+    const views: GameView[] = [];
+    const playerAgent: PlayerAgent = {
+      chooseAction: (view) => {
+        views.push(view);
+        return { type: "pass" };
+      },
+    };
+
+    runBatch(decklist, { seed: 1, horizon: 3 }, { cardCache, playerAgent });
+
+    expect(views.map((v) => [v.turn, v.horizon, v.hand.length, v.commandZone.length, v.librarySize])).toEqual([
+      [1, 3, 8, 1, 7],
+      [2, 3, 9, 1, 6],
+      [3, 3, 10, 1, 5],
+    ]);
   });
 });
