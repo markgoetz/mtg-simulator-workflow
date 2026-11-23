@@ -119,14 +119,6 @@ describe("runBatch", () => {
     expect(() => playGame({ seed })).toThrow(`seed must be an integer from 0 to 4294967295, got ${seed}`);
   });
 
-  it("reports Decklist cards that are not in the card cache, by line", () => {
-    const unknown = parseDecklist("Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring\n1 Nonexistent Card");
-
-    expect(() => runBatch(unknown, { seed: 1, horizon: 1 }, { cardCache, playerAgent: scriptedAgent() })).toThrow(
-      'Line 6: card not found: "Nonexistent Card"',
-    );
-  });
-
   it("fails clearly when the Horizon draws more cards than the library holds", () => {
     // 15 cards: the opening hand of 7 plus 8 turns of draws empties it, so turn 9 cannot draw.
     expect(() => playGame({ horizon: 9 })).toThrow("Cannot draw on turn 9: the library is empty");

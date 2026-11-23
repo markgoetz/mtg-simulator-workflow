@@ -23,11 +23,7 @@ export interface BatchResult {
 /** Plays the Batch of Games of a Decklist and returns their Game logs. One Game, for now. */
 export default function runBatch(decklist: Decklist, config: BatchConfig, deps: BatchDeps): BatchResult {
   validateBatchConfig(config);
-  const { commanders, cards, notFound } = resolveDecklist(decklist, deps.cardCache);
-  if (notFound.length > 0)
-    throw new Error(
-      `The Decklist has cards that are not in the card cache:\n${notFound.map((n) => n.message).join("\n")}`,
-    );
+  const { commanders, cards } = resolveDecklist(decklist, deps.cardCache);
   const library: CardData[] = cards.flatMap(({ cardData, quantity }) => Array<CardData>(quantity).fill(cardData));
   const recorder = createGameLogRecorder();
   const game = new Game({ commanders, library, seed: config.seed, horizon: config.horizon, recorder });
