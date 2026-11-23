@@ -1,4 +1,5 @@
-import { MAX_SEED } from "../batch/index.js";
+import { randomInt } from "node:crypto";
+import { MAX_SEED, type BatchConfig } from "../batch/index.js";
 
 export const DEFAULT_HORIZON = 6;
 
@@ -8,17 +9,13 @@ function parseInteger(option: string, text: string, rule: string, min: number, m
   return value;
 }
 
-/** Reads --seed and --horizon; returns undefined when no Game was asked for (no --seed). */
-export default function parseBatchOptions(options: {
-  seed?: string;
-  horizon?: string;
-}): { seed: number; horizon: number } | undefined {
-  if (options.seed === undefined) {
-    if (options.horizon !== undefined) throw new Error("--horizon needs --seed");
-    return undefined;
-  }
+/** Reads --seed and --horizon. A missing seed is chosen at random; the Game log records it. */
+export default function parseBatchOptions(options: { seed?: string; horizon?: string }): BatchConfig {
   return {
-    seed: parseInteger("seed", options.seed, `an integer from 0 to ${MAX_SEED}`, 0, MAX_SEED),
+    seed:
+      options.seed === undefined
+        ? randomInt(MAX_SEED + 1)
+        : parseInteger("seed", options.seed, `an integer from 0 to ${MAX_SEED}`, 0, MAX_SEED),
     horizon:
       options.horizon === undefined
         ? DEFAULT_HORIZON

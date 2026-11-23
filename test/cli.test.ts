@@ -6,34 +6,35 @@ const cli = fileURLToPath(new URL("../src/main.ts", import.meta.url));
 const fixture = (name: string) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const cards = fileURLToPath(new URL("../src/cardData/fixtures/oracle-cards-sample.jsonl", import.meta.url));
 
+function events(stdout: string): Record<string, unknown>[] {
+  return stdout
+    .trimEnd()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+}
+
 function run(...args: string[]) {
   const result = spawnSync(process.execPath, ["--import", "tsx", cli, ...args], { encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 describe("cli", () => {
-  it("prints the parsed commander and card list for a Decklist file", () => {
+  it("plays a Game for a Decklist file, taking the commander and library from it", () => {
     const { status, stdout } = run(fixture("sample-decklist.txt"), "--cards", cards);
+    const [setup, shuffle] = events(stdout);
 
     expect(status).toBe(0);
-    expect(stdout).toBe(
-      [
-        "Commander: Atraxa, Praetors' Voice (CM2) 10",
-        "Cards (99):",
-        "  1 Sol Ring (C21) 263",
-        "  1 Arcane Signet (C21) 297",
-        "  97 Forest",
-        "",
-      ].join("\n"),
-    );
+    expect(setup).toMatchObject({ type: "setup", commanders: ["Atraxa, Praetors' Voice"] });
+    expect(shuffle?.library).toHaveLength(99);
   });
 
   it("reads the commander from the end of a Moxfield export", () => {
     const { status, stdout } = run(fixture("moxfield-decklist.txt"), "--cards", cards);
+    const [setup, shuffle] = events(stdout);
 
     expect(status).toBe(0);
-    expect(stdout).toContain("Commander: Atraxa, Praetors' Voice (CM2) 10");
-    expect(stdout).toContain("Cards (99):");
+    expect(setup).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"] });
+    expect(shuffle?.library).toHaveLength(99);
   });
 
   it("takes the commander from --commander when the file has no Commander section", () => {
@@ -68,7 +69,7 @@ describe("cli", () => {
     expect(stderr).toMatch(/commander/i);
   });
 
-  describe("with --seed", () => {
+  describe("choosing the Game", () => {
     const play = (...extra: string[]) => run(fixture("sample-decklist.txt"), "--cards", cards, ...extra);
     const lines = (stdout: string) => stdout.trimEnd().split("\n");
 
@@ -77,7 +78,9 @@ describe("cli", () => {
 
       expect(status).toBe(0);
       expect(lines(stdout)).toHaveLength(2 + 7 + 6 * 4);
-      expect(lines(stdout)[0]).toBe(`{"seq":0,"type":"setup","turn":0,"commanders":["Atraxa, Praetors' Voice"]}`);
+      expect(lines(stdout)[0]).toBe(
+        `{"seq":0,"type":"setup","turn":0,"commanders":["Atraxa, Praetors' Voice"],"seed":1}`,
+      );
       expect(lines(stdout).at(-1)).toBe('{"seq":32,"type":"turn-end","turn":6}');
     });
 
@@ -114,11 +117,15 @@ describe("cli", () => {
       expect(stderr).toContain(`--horizon must be a positive integer, got "${horizon}"`);
     });
 
-    it("requires --seed when --horizon is given", () => {
-      const { status, stderr } = play("--horizon", "3");
+    it("plays a Game with a randomly chosen seed, written in the Game log, when --seed is not given", () => {
+      const { status, stdout } = play("--horizon", "2");
+      const [setup] = events(stdout);
 
-      expect(status).toBe(1);
-      expect(stderr).toContain("--horizon needs --seed");
+      expect(status).toBe(0);
+      expect(lines(stdout)).toHaveLength(2 + 7 + 2 * 4);
+      expect(Number.isInteger(setup?.seed)).toBe(true);
+      expect(setup?.seed).toBeGreaterThanOrEqual(0);
+      expect(setup?.seed).toBeLessThanOrEqual(4294967295);
     });
   });
 });

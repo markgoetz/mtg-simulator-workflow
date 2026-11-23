@@ -64,7 +64,7 @@ describe("runBatch", () => {
       [15, 2, "pass"],
       [16, 2, "turn-end"],
     ]);
-    expect(log.events[0]).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"] });
+    expect(log.events[0]).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"], seed: 1 });
   });
 
   it("plays to the configured Horizon", () => {

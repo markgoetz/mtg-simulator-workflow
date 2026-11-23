@@ -27,8 +27,8 @@ export default class Game {
 
   /** Shuffles the library and draws the opening hand. The player is on the draw. */
   start(): void {
-    const { commanders, recorder } = this.options;
-    recorder.record({ type: "setup", turn: 0, commanders: commanders.map((c) => c.name) });
+    const { commanders, seed, recorder } = this.options;
+    recorder.record({ type: "setup", turn: 0, commanders: commanders.map((c) => c.name), seed });
     recorder.record({ type: "shuffle", turn: 0, library: this.library.map((c) => c.name) });
     for (let i = 0; i < OPENING_HAND_SIZE; i++) this.draw();
   }
