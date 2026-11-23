@@ -4,6 +4,8 @@ import type { CardData, CardCache } from "./loadCardCache.js";
 export interface ResolvedCard {
   cardData: CardData;
   quantity: number;
+  /** 1-based line number of the card in the Decklist text. */
+  line: number;
 }
 
 export interface CardNotFound {
@@ -35,7 +37,9 @@ export default function resolveDecklist(decklist: Decklist, cache: CardCache): R
   const lookups = [...commanderLookups, ...cardLookups];
 
   const commanders = commanderLookups.flatMap(({ card }) => (card ? [card] : []));
-  const cards = cardLookups.flatMap(({ entry, card }) => (card ? [{ cardData: card, quantity: entry.quantity }] : []));
+  const cards = cardLookups.flatMap(({ entry, card }) =>
+    card ? [{ cardData: card, quantity: entry.quantity, line: entry.line }] : [],
+  );
   const notFound = lookups.filter(({ card }) => !card).map(({ entry }) => notFoundFor(entry));
 
   return { commanders, cards, notFound: notFound.sort((a, b) => a.line - b.line) };

@@ -4,4 +4,4 @@ Commander
 Deck
 1 Sol Ring (C21) 263
 1 Arcane Signet (C21) 297
-10 Forest
+97 Forest

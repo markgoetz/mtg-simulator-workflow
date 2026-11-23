@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { DEFAULT_CACHE_PATH, loadCardCache, resolveDecklist } from "../cardData/index.js";
+import { validateCommanderRules } from "../commanderRules/index.js";
 import { parseDecklist, type DecklistCard } from "../decklist/index.js";
 
 function formatCard(card: DecklistCard, withQuantity: boolean): string {
@@ -12,10 +14,10 @@ export default function runCli(argv: string[]): string {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
-    options: { commander: { type: "string", multiple: true } },
+    options: { commander: { type: "string", multiple: true }, cards: { type: "string" } },
   });
   const [path] = positionals;
-  if (!path) throw new Error("Usage: decklist <decklist-file> [--commander <name>]...");
+  if (!path) throw new Error("Usage: decklist <decklist-file> [--commander <name>]... [--cards <card-cache-file>]");
 
   let text: string;
   try {
@@ -26,7 +28,15 @@ export default function runCli(argv: string[]): string {
     throw error;
   }
 
-  const { commanders, cards } = parseDecklist(text, { commanders: values.commander });
+  const decklist = parseDecklist(text, { commanders: values.commander });
+  const { commanders, cards } = decklist;
+  const errors = validateCommanderRules(
+    decklist,
+    resolveDecklist(decklist, loadCardCache(values.cards ?? DEFAULT_CACHE_PATH)),
+  );
+  if (errors.length > 0) {
+    throw new Error(`The Decklist is not valid for Commander:\n\n${errors.join("\n\n")}`);
+  }
   const total = cards.reduce((sum, c) => sum + c.quantity, 0);
   return [
     `${commanders.length === 1 ? "Commander" : "Commanders"}: ${commanders.map((c) => formatCard(c, false)).join(" / ")}`,

@@ -24,11 +24,11 @@ describe("resolveDecklist", () => {
 
   it("resolves the commander and each card to Scryfall card data, keeping quantities", () => {
     expect(result.commanders.map((c) => c.name)).toEqual(["Atraxa, Praetors' Voice"]);
-    expect(result.cards.map((c) => [c.cardData.name, c.quantity])).toEqual([
-      ["Sol Ring", 1],
-      ["Wear // Tear", 1],
-      ["Forest", 10],
-      ["Jötun Grunt", 1],
+    expect(result.cards.map((c) => [c.cardData.name, c.quantity, c.line])).toEqual([
+      ["Sol Ring", 1, 5],
+      ["Wear // Tear", 1, 6],
+      ["Forest", 10, 8],
+      ["Jötun Grunt", 1, 9],
     ]);
   });
 
