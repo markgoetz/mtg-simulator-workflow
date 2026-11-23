@@ -1,6 +1,6 @@
 import type { CardData } from "../cardData/index.js";
 import type { Decklist } from "../decklist/index.js";
-import formatLines from "./formatLines.js";
+import type CommanderRuleError from "./CommanderRuleError.js";
 
 /** Keywords that let two commanders pair when both have the same one. */
 const SHARED_KEYWORDS = ["Partner", "Friends forever", "Character select", "Partner—Survivors", "Partner—Father & Son"];
@@ -33,29 +33,31 @@ function isLegalPair(a: CardData, b: CardData): boolean {
 }
 
 /** What each commander offers for pairing, so the error can say why two cards do not match. */
-function describeAbilities(card: CardData): string {
-  const abilities = [
+function abilitiesOf(card: CardData): string[] {
+  const withName = partnerWithName(card);
+  return [
     ...SHARED_KEYWORDS.filter((keyword) => hasKeyword(card, keyword)),
-    ...(partnerWithName(card) ? [`Partner with ${partnerWithName(card)}`] : []),
+    ...(withName ? [`Partner with ${withName}`] : []),
     ...(hasKeyword(card, "Choose a Background") ? ["Choose a Background"] : []),
     ...(hasKeyword(card, "Doctor's companion") ? ["Doctor's companion"] : []),
     ...(/\bBackground\b/.test(card.typeLine) ? ["Background"] : []),
     ...(/\bTime Lord Doctor\b/.test(card.typeLine) ? ["Time Lord Doctor"] : []),
   ];
-  return abilities.length === 0 ? "no partner ability" : abilities.join(", ");
 }
 
 /** Only for two commanders that are both in the card cache; legality comes from card data, not the Decklist text. */
-export default function checkPartnerPairing(decklist: Decklist, commanders: CardData[]): string[] {
+export default function checkPartnerPairing(decklist: Decklist, commanders: CardData[]): CommanderRuleError[] {
   if (decklist.commanders.length !== 2 || commanders.length !== 2) return [];
   const [a, b] = commanders as [CardData, CardData];
   if (isLegalPair(a, b)) return [];
-  const lines = formatLines(decklist.commanders.map((commander) => commander.line));
   return [
-    `Illegal partner pairing: "${a.name}" and "${b.name}" (${lines}) cannot both be Commanders. ` +
-      `"${a.name}" has ${describeAbilities(a)}; "${b.name}" has ${describeAbilities(b)}. ` +
-      "A legal pair shares Partner, Friends forever, Character select, Partner—Survivors or Partner—Father & Son; " +
-      "names each other with Partner with; is a Choose a Background commander and a Background; " +
-      "or is a Time Lord Doctor and a Doctor's companion.",
+    {
+      kind: "partnerPairing",
+      commanders: commanders.map((card, index) => ({
+        name: card.name,
+        line: decklist.commanders[index]!.line,
+        abilities: abilitiesOf(card),
+      })),
+    },
   ];
 }

@@ -2,14 +2,17 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadCardCache, resolveDecklist, type CardData } from "../cardData/index.js";
 import { parseDecklist, type Decklist } from "../decklist/index.js";
+import type CommanderRuleError from "./CommanderRuleError.js";
 import validateCommanderRules from "./validateCommanderRules.js";
 
 const cache = loadCardCache(fileURLToPath(new URL("../cardData/fixtures/oracle-cards-sample.jsonl", import.meta.url)));
 
-function validate(lines: string[], commanders?: string[]): string[] {
+function validate(lines: string[], commanders?: string[]): CommanderRuleError[] {
   const decklist = parseDecklist(lines.join("\n"), { commanders });
   return validateCommanderRules(decklist, resolveDecklist(decklist, cache));
 }
+
+const kinds = (errors: CommanderRuleError[]) => errors.map((e) => e.kind);
 
 /** A valid Atraxa deck: 1 commander + Sol Ring + 98 Forest = 100 cards. */
 const VALID = ["Commander", "1 Atraxa, Praetors' Voice", "", "Deck", "1 Sol Ring", "98 Forest"];
@@ -22,16 +25,16 @@ describe("validateCommanderRules", () => {
   it("reports the actual card count when the Decklist is not 100 cards", () => {
     const errors = validate(["Commander", "1 Atraxa, Praetors' Voice", "Deck", "1 Sol Ring", "10 Forest"]);
 
-    expect(errors).toEqual([
-      "Decklist has 12 cards, but a Commander Decklist must have exactly 100 (including its Commander).",
-    ]);
+    expect(errors).toEqual([{ kind: "cardCount", count: 12, required: 100, commanderCount: 1 }]);
   });
 
   it("counts a partner pair as two of the 100 cards", () => {
     const pair = ["Commander", "1 Tymna the Weaver", "1 Thrasios, Triton Hero", "Deck", "98 Forest"];
 
     expect(validate(pair)).toEqual([]);
-    expect(validate([...pair, "1 Sol Ring"]).join("\n")).toMatch(/has 101 cards/);
+    expect(validate([...pair, "1 Sol Ring"])).toEqual([
+      { kind: "cardCount", count: 101, required: 100, commanderCount: 2 },
+    ]);
   });
 
   it("lists cards outside the commander's color identity by name and line", () => {
@@ -44,8 +47,16 @@ describe("validateCommanderRules", () => {
       "97 Swamp",
     ]);
 
-    expect(errors.join("\n")).toContain('Line 4: "Lightning Bolt"');
-    expect(errors.join("\n")).toContain('Line 5: "Counterspell"');
+    expect(errors).toEqual([
+      {
+        kind: "colorIdentity",
+        allowed: ["W", "B"],
+        cards: [
+          { line: 4, name: "Lightning Bolt", colorIdentity: ["R"] },
+          { line: 5, name: "Counterspell", colorIdentity: ["U"] },
+        ],
+      },
+    ]);
   });
 
   it("uses the union of both commanders' color identities", () => {
@@ -58,11 +69,10 @@ describe("validateCommanderRules", () => {
       "1 Sol Ring",
       "96 Forest",
     ];
-    const text = validate(lines).join("\n");
+    const [error] = validate(lines);
 
-    expect(text).toContain('"Lightning Bolt"');
-    expect(text).not.toContain('"Forest"');
-    expect(text).not.toContain('"Sol Ring"');
+    expect(error).toMatchObject({ kind: "colorIdentity", allowed: ["W", "U", "B", "G"] });
+    expect(error?.kind === "colorIdentity" && error.cards.map((c) => c.name)).toEqual(["Lightning Bolt"]);
   });
 
   it("lists a repeated card with its total count and every line, counting quantities", () => {
@@ -76,9 +86,15 @@ describe("validateCommanderRules", () => {
       "95 Forest",
     ]);
 
-    expect(errors).toEqual([expect.stringContaining("Singleton")]);
-    expect(errors[0]).toContain('"Sol Ring" x2 (line 4)');
-    expect(errors[0]).toContain('"Rhystic Study" x2 (lines 5, 6)');
+    expect(errors).toEqual([
+      {
+        kind: "singleton",
+        cards: [
+          { name: "Sol Ring", count: 2, lines: [4] },
+          { name: "Rhystic Study", count: 2, lines: [5, 6] },
+        ],
+      },
+    ]);
   });
 
   it("allows any number of Basic lands and of cards that say a deck can have any number", () => {
@@ -95,7 +111,7 @@ describe("validateCommanderRules", () => {
       "97 Forest",
     ]);
 
-    expect(errors).toEqual(['Cards not found in the card cache: line 5 "Nonexistent Card".']);
+    expect(errors).toEqual([{ kind: "cardsNotFound", cards: [{ line: 5, name: "Nonexistent Card" }] }]);
   });
 
   it("reports every kind of error in one run", () => {
@@ -108,13 +124,13 @@ describe("validateCommanderRules", () => {
       "5 Plains",
     ]);
 
-    expect(errors).toHaveLength(4);
+    expect(kinds(errors).sort()).toEqual(["cardCount", "cardsNotFound", "colorIdentity", "singleton"]);
   });
 
-  it("skips the color identity check when a commander is not found, and says so only once", () => {
+  it("skips the color identity check when a commander is not found", () => {
     const errors = validate(["Commander", "1 Not A Commander", "Deck", "1 Sol Ring", "98 Forest"]);
 
-    expect(errors).toEqual(['Cards not found in the card cache: line 2 "Not A Commander".']);
+    expect(errors).toEqual([{ kind: "cardsNotFound", cards: [{ line: 2, name: "Not A Commander" }] }]);
   });
 });
 
@@ -123,7 +139,7 @@ function fakeCard(name: string, oracleText: string, typeLine = "Legendary Creatu
   return { name, layout: "normal", manaCost: "", typeLine, oracleText, colorIdentity: ["G"], faces: [face] };
 }
 
-function pairErrors(a: CardData, b: CardData): string[] {
+function pairErrors(a: CardData, b: CardData): CommanderRuleError[] {
   const decklist: Decklist = {
     commanders: [
       { name: a.name, quantity: 1, line: 1 },
@@ -136,7 +152,7 @@ function pairErrors(a: CardData, b: CardData): string[] {
     commanders: [a, b],
     cards: [{ cardData: forest, quantity: 98, line: 3 }],
     notFound: [],
-  }).filter((e) => !e.startsWith("Decklist has"));
+  }).filter((e) => e.kind !== "cardCount");
 }
 
 describe("partner pairing legality", () => {
@@ -168,10 +184,18 @@ describe("partner pairing legality", () => {
     expect(pairErrors(a, b)).toEqual([]);
   });
 
-  it("says why a pair is illegal by naming what each commander has", () => {
-    const [error] = pairErrors(partner("A"), fakeCard("B", "Partner—Survivors"));
+  it("says why a pair is illegal by recording what each commander has", () => {
+    const errors = pairErrors(partner("A"), fakeCard("B", "Partner—Survivors"));
 
-    expect(error).toContain('"A" has Partner; "B" has Partner—Survivors.');
+    expect(errors).toEqual([
+      {
+        kind: "partnerPairing",
+        commanders: [
+          { name: "A", line: 1, abilities: ["Partner"] },
+          { name: "B", line: 2, abilities: ["Partner—Survivors"] },
+        ],
+      },
+    ]);
   });
 
   it.each([
@@ -191,11 +215,16 @@ describe("partner pairing legality", () => {
       fakeCard("B", "x", "Legendary Enchantment — Background"),
     ],
     ["Doctor's companion without a Doctor", fakeCard("A", "Doctor's companion"), fakeCard("B", "Flying")],
-  ])("rejects %s, naming both commanders and the lines", (_name, a, b) => {
+  ])("rejects %s with a partnerPairing error naming both commanders and their lines", (_name, a, b) => {
     const errors = pairErrors(a, b);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatch(/"A".*"B"|"B".*"A"/);
-    expect(errors[0]).toMatch(/lines 1, 2/);
+    expect(errors[0]).toMatchObject({
+      kind: "partnerPairing",
+      commanders: [
+        { name: "A", line: 1 },
+        { name: "B", line: 2 },
+      ],
+    });
   });
 });

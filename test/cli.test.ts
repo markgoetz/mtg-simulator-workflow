@@ -49,9 +49,9 @@ describe("cli", () => {
     expect(stdout).toBe("");
     expect(stderr).toContain("The Decklist is not valid for Commander");
     expect(stderr).toContain("Decklist has 9 cards");
-    expect(stderr).toContain('line 6 "Nonexistent Card"');
-    expect(stderr).toContain('Line 5: "Lightning Bolt"');
-    expect(stderr).toContain('"Lightning Bolt" x2 (line 5)');
+    expect(stderr).toContain("| Card not found | 6 | Nonexistent Card |");
+    expect(stderr).toContain("| Color identity | 5 | Lightning Bolt |");
+    expect(stderr).toContain("| Singleton | 5 | Lightning Bolt | 2 copies; only 1 allowed |");
   });
 
   it("fails with an error naming the line for a malformed Decklist", () => {

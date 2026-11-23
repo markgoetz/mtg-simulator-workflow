@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { DEFAULT_CACHE_PATH, loadCardCache, resolveDecklist } from "../cardData/index.js";
-import { validateCommanderRules } from "../commanderRules/index.js";
+import { formatErrorsAsMarkdownTable, validateCommanderRules } from "../commanderRules/index.js";
 import { parseDecklist, type DecklistCard } from "../decklist/index.js";
 
 function formatCard(card: DecklistCard, withQuantity: boolean): string {
@@ -35,7 +35,7 @@ export default function runCli(argv: string[]): string {
     resolveDecklist(decklist, loadCardCache(values.cards ?? DEFAULT_CACHE_PATH)),
   );
   if (errors.length > 0) {
-    throw new Error(`The Decklist is not valid for Commander:\n\n${errors.join("\n\n")}`);
+    throw new Error(`The Decklist is not valid for Commander:\n\n${formatErrorsAsMarkdownTable(errors)}`);
   }
   const total = cards.reduce((sum, c) => sum + c.quantity, 0);
   return [

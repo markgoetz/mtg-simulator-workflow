@@ -1,7 +1,7 @@
 import type { ResolvedDecklist } from "../cardData/index.js";
+import type CommanderRuleError from "./CommanderRuleError.js";
 
-export default function checkNotFound(resolved: ResolvedDecklist): string[] {
+export default function checkNotFound(resolved: ResolvedDecklist): CommanderRuleError[] {
   if (resolved.notFound.length === 0) return [];
-  const cards = resolved.notFound.map((card) => `line ${card.line} "${card.name}"`);
-  return [`Cards not found in the card cache: ${cards.join(", ")}.`];
+  return [{ kind: "cardsNotFound", cards: resolved.notFound.map(({ line, name }) => ({ line, name })) }];
 }

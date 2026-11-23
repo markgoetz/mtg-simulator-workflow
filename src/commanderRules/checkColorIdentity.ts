@@ -1,5 +1,6 @@
 import type { Decklist } from "../decklist/index.js";
 import type { ResolvedDecklist } from "../cardData/index.js";
+import type CommanderRuleError from "./CommanderRuleError.js";
 
 const COLOR_ORDER = "WUBRG";
 
@@ -8,7 +9,7 @@ function sortColors(colors: Iterable<string>): string[] {
 }
 
 /** Skipped when a commander is not in the card cache: its color identity is unknown, and that is reported separately. */
-export default function checkColorIdentity(decklist: Decklist, resolved: ResolvedDecklist): string[] {
+export default function checkColorIdentity(decklist: Decklist, resolved: ResolvedDecklist): CommanderRuleError[] {
   if (resolved.commanders.length !== decklist.commanders.length) return [];
   const allowed = new Set(resolved.commanders.flatMap((commander) => commander.colorIdentity));
   const offenders = resolved.cards
@@ -16,9 +17,15 @@ export default function checkColorIdentity(decklist: Decklist, resolved: Resolve
     .sort((a, b) => a.line - b.line);
   if (offenders.length === 0) return [];
 
-  const identity = allowed.size === 0 ? "colorless" : sortColors(allowed).join("");
-  const rows = offenders.map(
-    ({ cardData, line }) => `  Line ${line}: "${cardData.name}" (${sortColors(cardData.colorIdentity).join("")})`,
-  );
-  return [`Cards outside the Commander's color identity (${identity}):\n${rows.join("\n")}`];
+  return [
+    {
+      kind: "colorIdentity",
+      allowed: sortColors(allowed),
+      cards: offenders.map(({ cardData, line }) => ({
+        line,
+        name: cardData.name,
+        colorIdentity: sortColors(cardData.colorIdentity),
+      })),
+    },
+  ];
 }
