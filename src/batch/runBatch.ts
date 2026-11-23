@@ -1,8 +1,8 @@
 import type { CardData, CardCache } from "../cardData/index.js";
 import { resolveDecklist } from "../cardData/index.js";
 import type { Decklist } from "../decklist/index.js";
-import { createGameLogRecorder, type GameLog } from "../gameLog/index.js";
-import type { PlayerAgent } from "../playerAgent/index.js";
+import { createGameLogRecorder, type GameLog, type GameLogEventBody } from "../gameLog/index.js";
+import type { Action, PlayerAgent } from "../playerAgent/index.js";
 import { Game } from "../rulesEngine/index.js";
 import validateBatchConfig from "./validateBatchConfig.js";
 
@@ -20,6 +20,11 @@ export interface BatchResult {
   gameLogs: GameLog[];
 }
 
+/** The Game log event for each action a Player agent can choose; a new action will not compile without one. */
+const eventForAction: Record<Action["type"], (turn: number) => GameLogEventBody> = {
+  pass: (turn) => ({ type: "pass", turn }),
+};
+
 /** Plays the Batch of Games of a Decklist and returns their Game logs. One Game, for now. */
 export default function runBatch(decklist: Decklist, config: BatchConfig, deps: BatchDeps): BatchResult {
   validateBatchConfig(config);
@@ -33,11 +38,7 @@ export default function runBatch(decklist: Decklist, config: BatchConfig, deps: 
     game.startTurn();
     const view = game.view();
     const action = deps.playerAgent.chooseAction(view);
-    switch (action.type) {
-      case "pass":
-        recorder.record({ type: "pass", turn: view.turn });
-        break;
-    }
+    recorder.record(eventForAction[action.type](view.turn));
     game.endTurn();
   }
   return { gameLogs: [recorder.log()] };
