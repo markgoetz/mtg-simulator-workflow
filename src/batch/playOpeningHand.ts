@@ -6,7 +6,7 @@ import type { Game } from "../rulesEngine/index.js";
 export default function playOpeningHand(game: Game, agent: PlayerAgent, recorder: GameLogRecorder): void {
   game.start();
   while (game.canMulligan() && agent.chooseMulligan(game.view()) === "mulligan") {
-    recorder.record({ type: "mulligan", turn: 0, mulligansTaken: game.view().mulligansTaken });
+    recorder.record({ type: "mulligan", turn: 0, mulligansTaken: game.view().mulligansTaken + 1 });
     game.mulligan();
   }
   recorder.record({ type: "keep", turn: 0, mulligansTaken: game.view().mulligansTaken });

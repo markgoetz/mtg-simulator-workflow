@@ -164,6 +164,8 @@ describe("runBatch", () => {
     it("takes the first mulligan free: redraws 7, bottoms nothing", () => {
       const log = playWithMulligans(1);
 
+      expect(log.events.find((e) => e.type === "mulligan")).toMatchObject({ mulligansTaken: 1 });
+
       expect(opening(log)).toEqual([
         "setup",
         "shuffle",

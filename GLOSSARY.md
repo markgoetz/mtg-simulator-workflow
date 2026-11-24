@@ -48,7 +48,7 @@ The deterministic part that keeps a game legal: zones, mana, land drops and turn
 _Avoid_: Judge, referee
 
 **Game view**:
-What the player agent is allowed to see of a game at a decision: its own hand, the cards it has played, the command zone, the turn and the size of the library. The rules engine builds it; the player agent only reads it.
+What the player agent is allowed to see of a game at a decision: its own hand, the cards it has played, the command zone, the turn, the size of the library and the mulligans taken. The rules engine builds it; the player agent only reads it.
 _Avoid_: Game state, snapshot, observation
 
 **Card data**:
