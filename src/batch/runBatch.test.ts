@@ -5,7 +5,7 @@ import { loadCardCache } from "../cardData/index.js";
 import { parseDecklist } from "../decklist/index.js";
 import type { GameLog } from "../gameLog/index.js";
 import type { GameView } from "../gameView/index.js";
-import { scriptedAgent, type PlayerAgent } from "../playerAgent/index.js";
+import { scriptedAgent, type Action, type PlayerAgent } from "../playerAgent/index.js";
 import runBatch from "./runBatch.js";
 
 const cardCache = loadCardCache(
@@ -140,6 +140,190 @@ describe("runBatch", () => {
       [1, 3, 8, 1, 7],
       [2, 3, 9, 1, 6],
       [3, 3, 10, 1, 5],
+    ]);
+  });
+});
+
+describe("runBatch turn rules", () => {
+  const rulesDecklist = parseDecklist(
+    readFileSync(fileURLToPath(new URL("./fixtures/rules-decklist.txt", import.meta.url)), "utf8"),
+  );
+  const PASS: Action = { type: "pass" };
+
+  /** Plays the rules-fixture deck with a scripted Player agent; returns the rules engine events, minus turn bookkeeping. */
+  function play(seed: number, horizon: number, actions: Action[]) {
+    const { gameLogs } = runBatch(rulesDecklist, { seed, horizon }, { cardCache, playerAgent: scriptedAgent(actions) });
+    const bookkeeping = ["setup", "shuffle", "draw", "turn-start", "turn-end", "decision", "pass"];
+    return gameLogs[0]!.events.filter((e) => !bookkeeping.includes(e.type));
+  }
+
+  // Seed 14: opening hand Forest, Birds of Paradise, Rhystic Study, Jötun Grunt, Forest, Thornwood Falls, Forest;
+  // then draws Sol Ring, Brainstorm, Forest, Forest.
+  it("allows one land drop a turn", () => {
+    const events = play(14, 2, [
+      { type: "play-land", card: "Forest" },
+      { type: "play-land", card: "Forest" },
+      PASS,
+      { type: "play-land", card: "Forest" },
+    ]);
+
+    expect(events.map((e) => [e.turn, e.type])).toEqual([
+      [1, "play-land"],
+      [1, "illegal-action"],
+      [2, "play-land"],
+    ]);
+    expect(events[1]).toMatchObject({ card: "Forest", reason: "a land was already played this turn" });
+  });
+
+  it("keeps a land that entered tapped from paying for a spell until the next turn", () => {
+    const events = play(14, 2, [
+      { type: "play-land", card: "Thornwood Falls" },
+      { type: "cast", card: "Birds of Paradise" },
+      PASS,
+      { type: "cast", card: "Birds of Paradise" },
+    ]);
+
+    expect(events[0]).toMatchObject({ type: "play-land", card: "Thornwood Falls", tapped: true });
+    expect(events[1]).toMatchObject({ type: "illegal-action", turn: 1, reason: "cannot pay {G}" });
+    expect(events.slice(2).map((e) => [e.turn, e.type])).toEqual([
+      [2, "mana-spent"],
+      [2, "cast"],
+    ]);
+  });
+
+  it("casts a card only if its mana cost can be paid, logging each mana spent", () => {
+    const events = play(14, 1, [
+      { type: "play-land", card: "Forest" },
+      { type: "cast", card: "Rhystic Study" },
+      { type: "cast", card: "Birds of Paradise" },
+      { type: "cast", card: "Jötun Grunt" },
+    ]);
+
+    expect(events.map((e) => e.type)).toEqual(["play-land", "illegal-action", "mana-spent", "cast", "illegal-action"]);
+    expect(events[1]).toMatchObject({ card: "Rhystic Study", reason: "cannot pay {2}{U}" });
+    expect(events[2]).toMatchObject({ land: "Forest", mana: "G" });
+    expect(events[3]).toMatchObject({ card: "Birds of Paradise", manaCost: "{G}", destination: "battlefield" });
+    expect(events[4]).toMatchObject({ card: "Jötun Grunt", reason: "cannot pay {1}{W}" });
+  });
+
+  it("pays coloured and generic costs from different lands", () => {
+    // Seed 15: opening hand Counterspell, Command Tower, Birds of Paradise, Brainstorm, Forest, Forest, Jötun Grunt.
+    const events = play(15, 2, [
+      { type: "play-land", card: "Forest" },
+      PASS,
+      { type: "play-land", card: "Command Tower" },
+      { type: "cast", card: "Jötun Grunt" },
+    ]);
+
+    const spent = events.flatMap((e) => (e.type === "mana-spent" ? [[e.land, e.mana]] : [])).sort();
+    expect(spent).toEqual([
+      ["Command Tower", "W"],
+      ["Forest", "G"],
+    ]);
+    expect(events.at(-1)).toMatchObject({ type: "cast", card: "Jötun Grunt", manaCost: "{1}{W}" });
+  });
+
+  it("sends a spell that is not a permanent to the graveyard", () => {
+    const events = play(15, 1, [
+      { type: "play-land", card: "Command Tower" },
+      { type: "cast", card: "Brainstorm" },
+    ]);
+
+    expect(events.at(-1)).toMatchObject({ type: "cast", card: "Brainstorm", destination: "graveyard" });
+  });
+
+  it.each([
+    ["a card that is not in hand", { type: "cast", card: "Counterspell" }, "Counterspell is not in hand"],
+    ["a commander", { type: "cast", card: "Atraxa, Praetors' Voice" }, "Atraxa, Praetors' Voice is not in hand"],
+    ["a land", { type: "cast", card: "Forest" }, "Forest is a land, so it is played rather than cast"],
+  ] satisfies [string, Action, string][])("rejects casting %s", (_, action, reason) => {
+    expect(play(14, 1, [action])).toMatchObject([{ type: "illegal-action", reason }]);
+  });
+
+  it("rejects playing a card that is not a land", () => {
+    expect(play(14, 1, [{ type: "play-land", card: "Birds of Paradise" }])).toMatchObject([
+      { type: "illegal-action", reason: "Birds of Paradise is not a land" },
+    ]);
+  });
+
+  it("stops a creature attacking or using a tap ability on the turn it enters, but not on a later turn", () => {
+    const events = play(14, 2, [
+      { type: "play-land", card: "Forest" },
+      { type: "cast", card: "Birds of Paradise" },
+      { type: "attack", card: "Birds of Paradise" },
+      { type: "activate", card: "Birds of Paradise" },
+      PASS,
+      { type: "attack", card: "Birds of Paradise" },
+    ]);
+
+    const rest = events.slice(3);
+    expect(rest.map((e) => [e.turn, e.type])).toEqual([
+      [1, "illegal-action"],
+      [1, "illegal-action"],
+      [2, "attack"],
+    ]);
+    expect(rest[0]).toMatchObject({ reason: "Birds of Paradise has summoning sickness" });
+  });
+
+  it("lets a non-creature permanent use its tap ability the turn it enters", () => {
+    // Seed 14 draws Sol Ring on turn 1; it costs {1}.
+    const events = play(14, 1, [
+      { type: "play-land", card: "Forest" },
+      { type: "cast", card: "Sol Ring" },
+      { type: "activate", card: "Sol Ring" },
+    ]);
+
+    expect(events.at(-1)).toMatchObject({ type: "activate", card: "Sol Ring" });
+  });
+
+  it("logs each Player agent decision before the rules engine events it causes", () => {
+    const { gameLogs } = runBatch(
+      rulesDecklist,
+      { seed: 14, horizon: 1 },
+      { cardCache, playerAgent: scriptedAgent([{ type: "play-land", card: "Forest" }]) },
+    );
+
+    const turn = gameLogs[0]!.events.filter((e) => e.turn === 1).map((e) => e.type);
+    expect(turn).toEqual(["turn-start", "draw", "decision", "play-land", "pass", "turn-end"]);
+    expect(gameLogs[0]!.events.find((e) => e.type === "decision")).toMatchObject({
+      action: { type: "play-land", card: "Forest" },
+    });
+  });
+
+  it("shows the Player agent its battlefield and whether the land drop is used", () => {
+    const views: GameView[] = [];
+    const agent = scriptedAgent([
+      { type: "play-land", card: "Forest" },
+      { type: "cast", card: "Birds of Paradise" },
+      PASS,
+    ]);
+    const playerAgent: PlayerAgent = {
+      chooseAction: (view) => {
+        views.push(view);
+        return agent.chooseAction(view);
+      },
+    };
+
+    runBatch(rulesDecklist, { seed: 14, horizon: 2 }, { cardCache, playerAgent });
+
+    const seen = views.map((v) => [v.landPlayed, v.battlefield.map((p) => [p.card.name, p.tapped, p.summoningSick])]);
+    expect(seen).toEqual([
+      [false, []],
+      [true, [["Forest", false, false]]],
+      [
+        true,
+        [
+          ["Forest", true, false],
+          ["Birds of Paradise", false, true],
+        ],
+      ],
+      [
+        false,
+        [
+          ["Forest", false, false],
+          ["Birds of Paradise", false, false],
+        ],
+      ],
     ]);
   });
 });

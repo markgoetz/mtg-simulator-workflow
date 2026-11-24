@@ -1,1 +1,1 @@
-export type { default as GameView } from "./GameView.js";
+export type { default as GameView, PermanentView } from "./GameView.js";
