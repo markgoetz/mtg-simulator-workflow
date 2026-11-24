@@ -6,29 +6,40 @@ import shuffle from "./shuffle.js";
 
 export const OPENING_HAND_SIZE = 7;
 
-export interface OpeningHandDeps {
-  /** The Game's library and hand, changed in place. */
+export interface HandDeps {
+  /** The Game's library, changed in place. */
   library: CardData[];
-  hand: CardData[];
   random: () => number;
   recorder: GameLogRecorder;
   draw: () => void;
   view: () => GameView;
 }
 
-/** The London mulligan: keep or redraw 7, then bottom one card per mulligan taken, the first being free. */
-export default class OpeningHand {
+/** The player's hand for the whole Game: it settles the opening hand (London mulligan) and then holds the cards. */
+export default class Hand {
+  private readonly held: CardData[] = [];
   private mulligans = 0;
 
-  constructor(private readonly deps: OpeningHandDeps) {}
+  constructor(private readonly deps: HandDeps) {}
+
+  get cards(): readonly CardData[] {
+    return this.held;
+  }
 
   get mulligansTaken(): number {
     return this.mulligans;
   }
 
-  /** Draws 7, then asks the chooser to keep or mulligan until it keeps, and to bottom the cards owed. */
-  choose(chooser: OpeningHandChooser): void {
-    this.drawHand();
+  add(card: CardData): void {
+    this.held.push(card);
+  }
+
+  /**
+   * Draws 7, then asks the chooser to keep or mulligan until it keeps, and to bottom the cards owed.
+   * London mulligan: the first is free, each one after it bottoms a card.
+   */
+  chooseOpening(chooser: OpeningHandChooser): void {
+    this.drawOpening();
     // A mulligan always leaves at least one card in hand, so the 8th is never offered.
     while (this.mulligans < OPENING_HAND_SIZE && chooser.chooseMulligan(this.deps.view()) === "mulligan") {
       this.mulligan();
@@ -39,31 +50,31 @@ export default class OpeningHand {
   }
 
   private mulligan(): void {
-    const { library, hand, random, recorder } = this.deps;
+    const { library, random, recorder } = this.deps;
     this.mulligans += 1;
     recorder.record({ type: "mulligan", turn: 0, mulligansTaken: this.mulligans });
-    library.splice(0, library.length, ...shuffle([...library, ...hand], random));
-    hand.length = 0;
+    library.splice(0, library.length, ...shuffle([...library, ...this.held], random));
+    this.held.length = 0;
     recorder.record({ type: "shuffle", turn: 0, library: library.map((c) => c.name) });
-    this.drawHand();
+    this.drawOpening();
   }
 
   private bottom(cards: readonly CardData[]): void {
-    const { library, hand, recorder } = this.deps;
+    const { library, recorder } = this.deps;
     const owed = this.mulligans - 1;
     if (cards.length !== owed) {
       throw new Error(`Must put ${owed} cards on the bottom of the library, got ${cards.length}`);
     }
     for (const card of cards) {
-      const at = hand.indexOf(card);
+      const at = this.held.indexOf(card);
       if (at < 0) throw new Error(`Cannot put ${card.name} on the bottom: it is not in the hand`);
-      hand.splice(at, 1);
+      this.held.splice(at, 1);
     }
     library.push(...cards);
     recorder.record({ type: "bottom", turn: 0, cards: cards.map((c) => c.name) });
   }
 
-  private drawHand(): void {
+  private drawOpening(): void {
     for (let i = 0; i < OPENING_HAND_SIZE; i++) this.deps.draw();
   }
 }

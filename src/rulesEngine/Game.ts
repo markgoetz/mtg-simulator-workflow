@@ -2,7 +2,7 @@ import type { CardData } from "../cardData/index.js";
 import type { GameLogRecorder } from "../gameLog/index.js";
 import type { GameView } from "../gameView/index.js";
 import createRandom from "./createRandom.js";
-import OpeningHand from "./OpeningHand.js";
+import Hand from "./Hand.js";
 import type OpeningHandChooser from "./OpeningHandChooser.js";
 import shuffle from "./shuffle.js";
 
@@ -19,15 +19,13 @@ export interface GameOptions {
 export default class Game {
   private turn = 0;
   private readonly library: CardData[];
-  private readonly hand: CardData[] = [];
-  private readonly openingHand: OpeningHand;
+  private readonly hand: Hand;
 
   constructor(private readonly options: GameOptions) {
     const random = createRandom(options.seed);
     this.library = shuffle(options.library, random);
-    this.openingHand = new OpeningHand({
+    this.hand = new Hand({
       library: this.library,
-      hand: this.hand,
       random,
       recorder: options.recorder,
       draw: () => this.draw(),
@@ -40,7 +38,7 @@ export default class Game {
     const { commanders, seed, recorder } = this.options;
     recorder.record({ type: "setup", turn: 0, commanders: commanders.map((c) => c.name), seed });
     recorder.record({ type: "shuffle", turn: 0, library: this.library.map((c) => c.name) });
-    this.openingHand.choose(chooser);
+    this.hand.chooseOpening(chooser);
   }
 
   isOver(): boolean {
@@ -61,17 +59,17 @@ export default class Game {
     return {
       turn: this.turn,
       horizon: this.options.horizon,
-      hand: [...this.hand],
+      hand: [...this.hand.cards],
       commandZone: [...this.options.commanders],
       librarySize: this.library.length,
-      mulligansTaken: this.openingHand.mulligansTaken,
+      mulligansTaken: this.hand.mulligansTaken,
     };
   }
 
   private draw(): void {
     const card = this.library.shift();
     if (!card) throw new Error(`Cannot draw on turn ${this.turn}: the library is empty`);
-    this.hand.push(card);
+    this.hand.add(card);
     this.options.recorder.record({ type: "draw", turn: this.turn, card: card.name });
   }
 }
