@@ -7,4 +7,6 @@ export default interface GameView {
   hand: readonly CardData[];
   commandZone: readonly CardData[];
   librarySize: number;
+  /** Mulligans taken so far this Game. */
+  mulligansTaken: number;
 }

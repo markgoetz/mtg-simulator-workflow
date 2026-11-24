@@ -4,6 +4,7 @@ import type { Decklist } from "../decklist/index.js";
 import { createGameLogRecorder, type GameLog, type GameLogEventBody } from "../gameLog/index.js";
 import type { Action, PlayerAgent } from "../playerAgent/index.js";
 import { Game } from "../rulesEngine/index.js";
+import playOpeningHand from "./playOpeningHand.js";
 import validateBatchConfig from "./validateBatchConfig.js";
 
 export interface BatchConfig {
@@ -33,7 +34,7 @@ export default function runBatch(decklist: Decklist, config: BatchConfig, deps: 
   const recorder = createGameLogRecorder();
   const game = new Game({ commanders, library, seed: config.seed, horizon: config.horizon, recorder });
 
-  game.start();
+  playOpeningHand(game, deps.playerAgent, recorder);
   while (!game.isOver()) {
     game.startTurn();
     const view = game.view();

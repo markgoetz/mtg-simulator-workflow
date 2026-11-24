@@ -40,6 +40,9 @@ _Avoid_: Trace, transcript
 The decision-maker that chooses what to play each turn in a game. It may be an LLM or a scripted heuristic.
 _Avoid_: Bot, AI, pilot
 
+**Mulligan**:
+The player agent's choice to redraw the opening hand. London mulligan: draw 7 again, then put one card on the bottom of the library per mulligan taken, with the first mulligan free.
+
 **Rules engine**:
 The deterministic part that keeps a game legal: zones, mana, land drops and turn structure. It decides what is allowed; the player agent decides what to do.
 _Avoid_: Judge, referee
