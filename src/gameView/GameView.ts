@@ -16,6 +16,8 @@ export default interface GameView {
   battlefield: readonly PermanentView[];
   commandZone: readonly CardData[];
   librarySize: number;
+  /** Mulligans taken so far this Game. */
+  mulligansTaken: number;
   /** Whether this turn's land drop has been used. */
   landPlayed: boolean;
 }

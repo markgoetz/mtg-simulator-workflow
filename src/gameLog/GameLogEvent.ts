@@ -3,6 +3,9 @@ export type GameLogEventBody =
   | { type: "setup"; turn: number; commanders: string[]; seed: number }
   | { type: "shuffle"; turn: number; library: string[] }
   | { type: "draw"; turn: number; card: string }
+  | { type: "keep"; turn: number; mulligansTaken: number }
+  | { type: "mulligan"; turn: number; mulligansTaken: number }
+  | { type: "bottom"; turn: number; cards: string[] }
   | { type: "turn-start"; turn: number }
   // Player agent decisions
   | { type: "decision"; turn: number; action: { type: string; card?: string } }

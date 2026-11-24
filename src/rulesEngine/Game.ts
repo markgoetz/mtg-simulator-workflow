@@ -3,14 +3,14 @@ import type { GameLogRecorder } from "../gameLog/index.js";
 import type { GameView } from "../gameView/index.js";
 import createRandom from "./createRandom.js";
 import entersTapped from "./entersTapped.js";
+import Hand from "./Hand.js";
 import hasType from "./hasType.js";
 import landMana from "./landMana.js";
+import type OpeningHandChooser from "./OpeningHandChooser.js";
 import parseManaCost from "./parseManaCost.js";
 import payManaCost from "./payManaCost.js";
 import type Permanent from "./Permanent.js";
 import shuffle from "./shuffle.js";
-
-export const OPENING_HAND_SIZE = 7;
 
 const PERMANENT_TYPES = ["Creature", "Artifact", "Enchantment", "Planeswalker", "Battle"];
 
@@ -28,23 +28,31 @@ type ActionType = "play-land" | "cast" | "attack" | "activate";
 /** One goldfish Game: the zones and turn structure. It decides what is allowed, not what to do. */
 export default class Game {
   private turn = 0;
-  private library: CardData[];
-  private hand: CardData[] = [];
+  private readonly library: CardData[];
+  private readonly hand: Hand;
   private battlefield: Permanent[] = [];
   private landPlayed = false;
   private readonly commanderColours: string[];
 
   constructor(private readonly options: GameOptions) {
-    this.library = shuffle(options.library, createRandom(options.seed));
+    const random = createRandom(options.seed);
+    this.library = shuffle(options.library, random);
     this.commanderColours = [...new Set(options.commanders.flatMap((c) => c.colorIdentity))];
+    this.hand = new Hand({
+      library: this.library,
+      random,
+      recorder: options.recorder,
+      draw: () => this.draw(),
+      view: () => this.view(),
+    });
   }
 
-  /** Shuffles the library and draws the opening hand. The player is on the draw. */
-  start(): void {
+  /** Shuffles the library and settles the opening hand with the chooser. The player is on the draw. */
+  start(chooser: OpeningHandChooser): void {
     const { commanders, seed, recorder } = this.options;
     recorder.record({ type: "setup", turn: 0, commanders: commanders.map((c) => c.name), seed });
     recorder.record({ type: "shuffle", turn: 0, library: this.library.map((c) => c.name) });
-    for (let i = 0; i < OPENING_HAND_SIZE; i++) this.draw();
+    this.hand.chooseOpening(chooser);
   }
 
   isOver(): boolean {
@@ -76,7 +84,7 @@ export default class Game {
     if (!hasType(card, "Land")) return this.reject("play-land", name, `${name} is not a land`);
     if (this.landPlayed) return this.reject("play-land", name, "a land was already played this turn");
     this.landPlayed = true;
-    this.hand.splice(this.hand.indexOf(card), 1);
+    this.hand.remove(card);
     const tapped = entersTapped(card);
     this.battlefield.push({ card, tapped, enteredTurn: this.turn });
     this.options.recorder.record({ type: "play-land", turn: this.turn, card: name, tapped });
@@ -100,7 +108,7 @@ export default class Game {
       source.tapped = true;
       recorder.record({ type: "mana-spent", turn: this.turn, land: source.card.name, mana });
     }
-    this.hand.splice(this.hand.indexOf(card), 1);
+    this.hand.remove(card);
     const isPermanent = PERMANENT_TYPES.some((type) => hasType(card, type));
     if (isPermanent) this.battlefield.push({ card, tapped: false, enteredTurn: this.turn });
     const destination = isPermanent ? "battlefield" : "graveyard";
@@ -127,10 +135,11 @@ export default class Game {
     return {
       turn: this.turn,
       horizon: this.options.horizon,
-      hand: [...this.hand],
+      hand: [...this.hand.cards],
       battlefield: this.battlefield.map((p) => ({ card: p.card, tapped: p.tapped, summoningSick: this.isSick(p) })),
       commandZone: [...this.options.commanders],
       librarySize: this.library.length,
+      mulligansTaken: this.hand.mulligansTaken,
       landPlayed: this.landPlayed,
     };
   }
@@ -156,7 +165,7 @@ export default class Game {
   }
 
   private cardInHand(name: string): CardData | string {
-    return this.hand.find((card) => card.name === name) ?? `${name} is not in hand`;
+    return this.hand.cards.find((card) => card.name === name) ?? `${name} is not in hand`;
   }
 
   private reject(action: ActionType, card: string, reason: string): void {
@@ -166,7 +175,7 @@ export default class Game {
   private draw(): void {
     const card = this.library.shift();
     if (!card) throw new Error(`Cannot draw on turn ${this.turn}: the library is empty`);
-    this.hand.push(card);
+    this.hand.add(card);
     this.options.recorder.record({ type: "draw", turn: this.turn, card: card.name });
   }
 }

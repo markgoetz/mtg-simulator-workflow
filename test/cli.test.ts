@@ -77,15 +77,15 @@ describe("cli", () => {
       const { status, stdout } = play("--seed", "1");
 
       expect(status).toBe(0);
-      expect(lines(stdout)).toHaveLength(2 + 7 + 6 * 4);
+      expect(lines(stdout)).toHaveLength(2 + 7 + 1 + 6 * 4);
       expect(lines(stdout)[0]).toBe(
         `{"seq":0,"type":"setup","turn":0,"commanders":["Atraxa, Praetors' Voice"],"seed":1}`,
       );
-      expect(lines(stdout).at(-1)).toBe('{"seq":32,"type":"turn-end","turn":6}');
+      expect(lines(stdout).at(-1)).toBe('{"seq":33,"type":"turn-end","turn":6}');
     });
 
     it("plays to the Horizon given by --horizon", () => {
-      expect(lines(play("--seed", "1", "--horizon", "2").stdout)).toHaveLength(2 + 7 + 2 * 4);
+      expect(lines(play("--seed", "1", "--horizon", "2").stdout)).toHaveLength(2 + 7 + 1 + 2 * 4);
     });
 
     it("prints the same Game log for the same seed and a different shuffle for a different seed", () => {
@@ -122,7 +122,7 @@ describe("cli", () => {
       const [setup] = events(stdout);
 
       expect(status).toBe(0);
-      expect(lines(stdout)).toHaveLength(2 + 7 + 2 * 4);
+      expect(lines(stdout)).toHaveLength(2 + 7 + 1 + 2 * 4);
       expect(Number.isInteger(setup?.seed)).toBe(true);
       expect(setup?.seed).toBeGreaterThanOrEqual(0);
       expect(setup?.seed).toBeLessThanOrEqual(4294967295);

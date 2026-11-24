@@ -49,27 +49,28 @@ function playGame(config: { seed?: number; horizon?: number } = {}) {
 }
 
 describe("runBatch", () => {
-  it("plays one Game on the draw, writing setup, shuffle, an opening hand of 7 and four events per turn", () => {
+  it("plays one Game on the draw, writing setup, shuffle, an opening hand of 7, a keep and four events per turn", () => {
     const log = playGame({ horizon: 2 });
 
     expect(log.events.map((e) => [e.seq, e.turn, e.type])).toEqual([
       [0, 0, "setup"],
       [1, 0, "shuffle"],
       ...[2, 3, 4, 5, 6, 7, 8].map((seq) => [seq, 0, "draw"]),
-      [9, 1, "turn-start"],
-      [10, 1, "draw"],
-      [11, 1, "pass"],
-      [12, 1, "turn-end"],
-      [13, 2, "turn-start"],
-      [14, 2, "draw"],
-      [15, 2, "pass"],
-      [16, 2, "turn-end"],
+      [9, 0, "keep"],
+      [10, 1, "turn-start"],
+      [11, 1, "draw"],
+      [12, 1, "pass"],
+      [13, 1, "turn-end"],
+      [14, 2, "turn-start"],
+      [15, 2, "draw"],
+      [16, 2, "pass"],
+      [17, 2, "turn-end"],
     ]);
     expect(log.events[0]).toMatchObject({ commanders: ["Atraxa, Praetors' Voice"], seed: 1 });
   });
 
   it("plays to the configured Horizon", () => {
-    expect(playGame({ horizon: 6 }).events).toHaveLength(2 + 7 + 6 * 4);
+    expect(playGame({ horizon: 6 }).events).toHaveLength(2 + 7 + 1 + 6 * 4);
   });
 
   it("produces the same Game log for the same Decklist and seed", () => {
@@ -128,6 +129,7 @@ describe("runBatch", () => {
   it("asks the Player agent once a turn, showing the turn, its hand, the command zone and the library size", () => {
     const views: GameView[] = [];
     const playerAgent: PlayerAgent = {
+      ...scriptedAgent(),
       chooseAction: (view) => {
         views.push(view);
         return { type: "pass" };
@@ -142,6 +144,101 @@ describe("runBatch", () => {
       [3, 3, 10, 1, 5],
     ]);
   });
+
+  describe("London mulligan", () => {
+    function playWithMulligans(mulligans: number) {
+      const { gameLogs } = runBatch(
+        decklist,
+        { seed: 1, horizon: 2 },
+        { cardCache, playerAgent: scriptedAgent([], { mulligans }) },
+      );
+      return gameLogs[0]!;
+    }
+    const opening = (log: GameLog) => log.events.filter((e) => e.turn === 0).map((e) => e.type);
+
+    it("keeps the first opening hand when the Player agent keeps", () => {
+      expect(opening(playWithMulligans(0))).toEqual(["setup", "shuffle", ...Array<string>(7).fill("draw"), "keep"]);
+      expect(playWithMulligans(0).events.find((e) => e.type === "keep")).toMatchObject({ mulligansTaken: 0 });
+    });
+
+    it("takes the first mulligan free: redraws 7, bottoms nothing", () => {
+      const log = playWithMulligans(1);
+
+      expect(log.events.find((e) => e.type === "mulligan")).toMatchObject({ mulligansTaken: 1 });
+
+      expect(opening(log)).toEqual([
+        "setup",
+        "shuffle",
+        ...Array<string>(7).fill("draw"),
+        "mulligan",
+        "shuffle",
+        ...Array<string>(7).fill("draw"),
+        "keep",
+      ]);
+      expect(log.events.filter((e) => e.type === "bottom")).toEqual([]);
+    });
+
+    it("bottoms one card for the second mulligan, as chosen by the Player agent, and logs it", () => {
+      const log = playWithMulligans(2);
+      const shuffles = log.events.flatMap((e) => (e.type === "shuffle" ? [e.library] : []));
+      const draws = log.events.flatMap((e) => (e.type === "draw" && e.turn === 0 ? [e.card] : []));
+      const thirdHand = draws.slice(14, 21);
+      const bottom = log.events.find((e) => e.type === "bottom");
+
+      expect(shuffles).toHaveLength(3);
+      expect(thirdHand).toEqual(shuffles[2]!.slice(0, 7));
+      // The scripted agent bottoms the last cards of its hand.
+      expect(bottom).toMatchObject({ turn: 0, cards: [thirdHand[6]] });
+      expect(opening(log).slice(-2)).toEqual(["keep", "bottom"]);
+    });
+
+    it("puts the bottomed cards at the bottom of the library and draws the next card from the top", () => {
+      const log = playWithMulligans(3);
+      const shuffles = log.events.flatMap((e) => (e.type === "shuffle" ? [e.library] : []));
+      const bottom = log.events.find((e) => e.type === "bottom");
+      const turnOneDraw = log.events.find((e) => e.type === "draw" && e.turn === 1);
+
+      if (bottom?.type !== "bottom") throw new Error("no bottom event");
+      expect(bottom.cards).toHaveLength(2);
+      expect(turnOneDraw).toMatchObject({ card: shuffles[3]![7] });
+    });
+
+    it("shows the hand after bottoming to the Player agent on turn 1", () => {
+      const views: GameView[] = [];
+      const playerAgent: PlayerAgent = {
+        ...scriptedAgent([], { mulligans: 3 }),
+        chooseAction: (view) => {
+          views.push(view);
+          return { type: "pass" };
+        },
+      };
+
+      runBatch(decklist, { seed: 1, horizon: 1 }, { cardCache, playerAgent });
+
+      // 7 drawn, 2 bottomed, then the turn 1 draw.
+      expect(views[0]).toMatchObject({ turn: 1, librarySize: 15 - 6 });
+      expect(views[0]!.hand).toHaveLength(6);
+    });
+
+    it("produces an identical, predictable Game log for the same seed and mulligans", () => {
+      expect(playWithMulligans(3)).toEqual(playWithMulligans(3));
+    });
+
+    it("shows the Player agent the mulligans taken so far at each decision", () => {
+      const seen: number[] = [];
+      const playerAgent: PlayerAgent = {
+        ...scriptedAgent([], { mulligans: 2 }),
+        chooseMulligan: (view) => {
+          seen.push(view.mulligansTaken);
+          return seen.length <= 2 ? "mulligan" : "keep";
+        },
+      };
+
+      runBatch(decklist, { seed: 1, horizon: 1 }, { cardCache, playerAgent });
+
+      expect(seen).toEqual([0, 1, 2]);
+    });
+  });
 });
 
 describe("runBatch turn rules", () => {
@@ -153,7 +250,7 @@ describe("runBatch turn rules", () => {
   /** Plays the rules-fixture deck with a scripted Player agent; returns the rules engine events, minus turn bookkeeping. */
   function play(seed: number, horizon: number, actions: Action[]) {
     const { gameLogs } = runBatch(rulesDecklist, { seed, horizon }, { cardCache, playerAgent: scriptedAgent(actions) });
-    const bookkeeping = ["setup", "shuffle", "draw", "turn-start", "turn-end", "decision", "pass"];
+    const bookkeeping = ["setup", "shuffle", "draw", "keep", "turn-start", "turn-end", "decision", "pass"];
     return gameLogs[0]!.events.filter((e) => !bookkeeping.includes(e.type));
   }
 
@@ -298,6 +395,7 @@ describe("runBatch turn rules", () => {
       PASS,
     ]);
     const playerAgent: PlayerAgent = {
+      ...agent,
       chooseAction: (view) => {
         views.push(view);
         return agent.chooseAction(view);

@@ -39,7 +39,7 @@ export default function runBatch(decklist: Decklist, config: BatchConfig, deps: 
   const recorder = createGameLogRecorder();
   const game = new Game({ commanders, library, seed: config.seed, horizon: config.horizon, recorder });
 
-  game.start();
+  game.start(deps.playerAgent);
   while (!game.isOver()) {
     game.startTurn();
     for (let actions = 0; ; actions++) {
