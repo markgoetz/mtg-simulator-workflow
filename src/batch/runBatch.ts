@@ -1,7 +1,7 @@
 import type { CardData, CardCache } from "../cardData/index.js";
 import { resolveDecklist } from "../cardData/index.js";
 import type { Decklist } from "../decklist/index.js";
-import { createGameLogRecorder, type GameLog, type GameLogEventBody } from "../gameLog/index.js";
+import { createGameLogRecorder, type GameLog } from "../gameLog/index.js";
 import type { Action, PlayerAgent } from "../playerAgent/index.js";
 import { Game } from "../rulesEngine/index.js";
 import validateBatchConfig from "./validateBatchConfig.js";
@@ -20,9 +20,15 @@ export interface BatchResult {
   gameLogs: GameLog[];
 }
 
-/** The Game log event for each action a Player agent can choose; a new action will not compile without one. */
-const eventForAction: Record<Action["type"], (turn: number) => GameLogEventBody> = {
-  pass: (turn) => ({ type: "pass", turn }),
+/** A Player agent that never passes would otherwise loop forever. */
+export const MAX_ACTIONS_PER_TURN = 200;
+
+/** Hands each action a Player agent can choose to the Rules engine; a new action will not compile without one. */
+const perform: Record<Exclude<Action["type"], "pass">, (game: Game, card: string) => void> = {
+  "play-land": (game, card) => game.playLand(card),
+  cast: (game, card) => game.cast(card),
+  attack: (game, card) => game.attack(card),
+  activate: (game, card) => game.activate(card),
 };
 
 /** Plays the Batch of Games of a Decklist and returns their Game logs. One Game, for now. */
@@ -36,9 +42,18 @@ export default function runBatch(decklist: Decklist, config: BatchConfig, deps: 
   game.start(deps.playerAgent);
   while (!game.isOver()) {
     game.startTurn();
-    const view = game.view();
-    const action = deps.playerAgent.chooseAction(view);
-    recorder.record(eventForAction[action.type](view.turn));
+    for (let actions = 0; ; actions++) {
+      const view = game.view();
+      if (actions === MAX_ACTIONS_PER_TURN)
+        throw new Error(`The Player agent took ${MAX_ACTIONS_PER_TURN} actions on turn ${view.turn} without passing`);
+      const action = deps.playerAgent.chooseAction(view);
+      if (action.type === "pass") {
+        game.pass();
+        break;
+      }
+      recorder.record({ type: "decision", turn: view.turn, action });
+      perform[action.type](game, action.card);
+    }
     game.endTurn();
   }
   return { gameLogs: [recorder.log()] };

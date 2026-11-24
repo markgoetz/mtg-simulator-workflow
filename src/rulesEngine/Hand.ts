@@ -34,6 +34,13 @@ export default class Hand {
     this.held.push(card);
   }
 
+  /** Takes one card out of the hand, e.g. when it is played or cast. */
+  remove(card: CardData): void {
+    const at = this.held.indexOf(card);
+    if (at < 0) throw new Error(`Cannot remove ${card.name}: it is not in the hand`);
+    this.held.splice(at, 1);
+  }
+
   /**
    * Draws 7, then asks the chooser to keep or mulligan until it keeps, and to bottom the cards owed.
    * London mulligan: the first is free, each one after it bottoms a card.
