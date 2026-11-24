@@ -46,7 +46,7 @@ export default class Hand {
     }
     this.deps.recorder.record({ type: "keep", turn: 0, mulligansTaken: this.mulligans });
     const owed = Math.max(0, this.mulligans - 1);
-    if (owed > 0) this.bottom(chooser.chooseBottom(this.deps.view(), owed));
+    if (owed > 0) this.bottom(chooser.chooseBottom(this.deps.view(), owed), owed);
   }
 
   private mulligan(): void {
@@ -59,9 +59,9 @@ export default class Hand {
     this.drawOpening();
   }
 
-  private bottom(cards: readonly CardData[]): void {
+  /** Puts exactly `owed` cards from the hand on the bottom of the library; only called when `owed` is positive. */
+  private bottom(cards: readonly CardData[], owed: number): void {
     const { library, recorder } = this.deps;
-    const owed = this.mulligans - 1;
     if (cards.length !== owed) {
       throw new Error(`Must put ${owed} cards on the bottom of the library, got ${cards.length}`);
     }
